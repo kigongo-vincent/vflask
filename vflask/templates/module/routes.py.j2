@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint, Flask
+from flask import Blueprint, Flask, Response
 
 from app.base import auth_required, role_required
 from app.modules.{{ module.table_name }}.handlers import {{ module.class_name }}Handler
@@ -14,7 +14,7 @@ handler = {{ module.class_name }}Handler()
 @bp.post("/list")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
-def list_{{ module.table_name }}() -> tuple:
+def list_{{ module.table_name }}() -> tuple[Response, int]:
     """List {{ module.table_name }}."""
     return handler.list()
 
@@ -22,14 +22,14 @@ def list_{{ module.table_name }}() -> tuple:
 @bp.post("/")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
-def create_{{ module.singular }}() -> tuple:
+def create_{{ module.singular }}() -> tuple[Response, int]:
     """Create {{ module.singular }}."""
     return handler.create()
 
 
 @bp.get("/<int:item_id>")
 @auth_required
-def get_{{ module.singular }}(item_id: int) -> tuple:
+def get_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
     """Get {{ module.singular }} by ID."""
     return handler.get(item_id)
 
@@ -37,7 +37,7 @@ def get_{{ module.singular }}(item_id: int) -> tuple:
 @bp.put("/<int:item_id>")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
-def update_{{ module.singular }}(item_id: int) -> tuple:
+def update_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
     """Update {{ module.singular }}."""
     return handler.update(item_id)
 
@@ -45,7 +45,7 @@ def update_{{ module.singular }}(item_id: int) -> tuple:
 @bp.delete("/<int:item_id>")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
-def delete_{{ module.singular }}(item_id: int) -> tuple:
+def delete_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
     """Delete {{ module.singular }}."""
     return handler.delete(item_id)
 
@@ -53,7 +53,7 @@ def delete_{{ module.singular }}(item_id: int) -> tuple:
 @bp.post("/bulk-delete")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
-def bulk_delete_{{ module.table_name }}() -> tuple:
+def bulk_delete_{{ module.table_name }}() -> tuple[Response, int]:
     """Bulk delete {{ module.table_name }}."""
     return handler.bulk_delete()
 

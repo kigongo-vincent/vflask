@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+from typing import TypeVar, cast
+
+from sqlalchemy.orm import InstrumentedAttribute, Query
+
+from app.base.types import JSONObject
+
+ModelT = TypeVar("ModelT")
+
+
+def apply_filters(
+    query: Query[ModelT],
+    model: type[ModelT],
+    columns: list[JSONObject] | None,
+    filterable: set[str] | None = None,
+) -> Query[ModelT]:
+    for column in columns or []:
+        field_value = column.get("column") or column.get("name") or ""
+        if not isinstance(field_value, str):
+            continue
+        field_name = field_value.strip()
+        if not field_name or (filterable is not None and field_name not in filterable):
+            continue
+
+        operator_value = column.get("operator", "eq")
+        operator = operator_value.lower() if isinstance(operator_value, str) else "eq"
+        value = column.get("value")
+        if value is None:
+            continue
+
+        candidate = getattr(model, field_name, None)
+        if not isinstance(candidate, InstrumentedAttribute):
+            continue
+        attribute = cast(InstrumentedAttribute[object], candidate)
+
+        if operator in {"eq", "equals", "is"}:
+            query = query.filter(attribute == value)
+        elif operator in {"ne", "noteq", "not"}:
+            query = query.filter(attribute != value)
+        elif operator in {"gt", "greaterthan"}:
+            query = query.filter(attribute > value)
+        elif operator in {"lt", "lessthan"}:
+            query = query.filter(attribute < value)
+        elif operator in {"like", "contains", "icontains"} and isinstance(value, str):
+            query = query.filter(attribute.like(f"%{value}%"))
+        elif operator in {"in", "contains_any"}:
+            values = value if isinstance(value, (list, tuple)) else [value]
+            query = query.filter(attribute.in_(values))
+
+    return query

@@ -1,0 +1,40 @@
+"""Create the {{ module.table_name }} table."""
+
+from alembic import op
+import sqlalchemy as sa
+
+revision = {{ revision_literal }}
+down_revision = {{ down_revision_literal }}
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "{{ module.table_name }}",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, primary_key=True),
+{% for field in fields %}
+        sa.Column("{{ field.name }}", {{ field.alembic_type }}, nullable={{ "True" if field.nullable else "False" }}),
+{% endfor %}
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("deleted_at", sa.DateTime(), nullable=True),
+{% for field in fields if field.unique and not field.index %}
+        sa.UniqueConstraint("{{ field.name }}", name="uq_{{ module.table_name }}_{{ field.name }}"),
+{% endfor %}
+    )
+{% for field in fields if field.index %}
+    op.create_index(
+        "ix_{{ module.table_name }}_{{ field.name }}",
+        "{{ module.table_name }}",
+        ["{{ field.name }}"],
+        unique={{ "True" if field.unique else "False" }},
+    )
+{% endfor %}
+
+
+def downgrade() -> None:
+{% for field in fields if field.index %}
+    op.drop_index("ix_{{ module.table_name }}_{{ field.name }}", table_name="{{ module.table_name }}")
+{% endfor %}
+    op.drop_table("{{ module.table_name }}")

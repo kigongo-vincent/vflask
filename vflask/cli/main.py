@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
 
 import click
 
@@ -50,6 +55,63 @@ def watch(project_root: str) -> None:
     from vflask.core.watcher import start_watcher
 
     start_watcher(Path(project_root).resolve())
+
+
+@cli.command("run")
+@click.option("--project-root", default=".", show_default=True, help="Root of the generated project.")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Interface for the development server.")
+@click.option("--port", default=5000, type=click.IntRange(1, 65535), show_default=True)
+@click.option("--with-services/--no-services", default=True, show_default=True, help="Start local Postgres and Redis with Docker Compose.")
+def run_project(project_root: str, host: str, port: int, with_services: bool) -> None:
+    """Prepare the database and run a generated Flask application."""
+    root = Path(project_root).expanduser().resolve()
+    if not (root / "app" / "__init__.py").is_file():
+        raise click.ClickException(f"No generated Flask app found under {root}")
+
+    env_file = root / ".env"
+    env_example = root / ".env.example"
+    if not env_file.exists() and env_example.is_file():
+        shutil.copyfile(env_example, env_file)
+
+    environment = os.environ.copy()
+    environment["APP_ENV"] = "development"
+    environment["FLASK_DEBUG"] = "1"
+    environment["PYTHONPATH"] = str(root)
+
+    if with_services:
+        if not (root / "docker-compose.yml").is_file():
+            raise click.ClickException("docker-compose.yml not found; use --no-services with an external database")
+        _run_project_command(["docker", "compose", "up", "-d", "--wait", "db", "redis"], root, environment)
+        _wait_for_postgres(root, environment)
+
+    revisions_dir = root / "migrations" / "versions"
+    if any(path.suffix == ".py" and path.name != "__init__.py" for path in revisions_dir.glob("*.py")):
+        _run_project_command([sys.executable, "-m", "flask", "--app", "app:create_app", "db", "upgrade"], root, environment)
+    _run_project_command([sys.executable, "-m", "app.cli", "init-db"], root, environment)
+    click.echo(f"Starting Flask at http://{host}:{port}")
+    _run_project_command(
+        [sys.executable, "-m", "flask", "--app", "app:create_app", "run", "--debug", "--host", host, "--port", str(port)],
+        root,
+        environment,
+    )
+
+
+def _run_project_command(command: list[str], root: Path, environment: dict[str, str]) -> None:
+    try:
+        subprocess.run(command, cwd=root, env=environment, check=True)
+    except FileNotFoundError as error:
+        raise click.ClickException(f"Required executable not found: {command[0]}") from error
+    except subprocess.CalledProcessError as error:
+        raise click.ClickException(f"Command failed with exit code {error.returncode}: {' '.join(command)}") from error
+
+
+def _wait_for_postgres(root: Path, environment: dict[str, str]) -> None:
+    probe = ["docker", "compose", "exec", "-T", "db", "pg_isready", "-U", "app", "-d", "app"]
+    for _ in range(30):
+        if subprocess.run(probe, cwd=root, env=environment, check=False, capture_output=True).returncode == 0:
+            return
+        time.sleep(1)
+    raise click.ClickException("PostgreSQL did not become ready within 30 seconds")
 
 
 if __name__ == "__main__":

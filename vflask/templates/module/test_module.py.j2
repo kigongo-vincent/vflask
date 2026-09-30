@@ -4,26 +4,24 @@ from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
 
 
 def test_{{ module.singular }}_model_field_names() -> None:
-    model_fields = {column.name for column in {{ module.class_name }}.__table__.columns}
-    assert "id" in model_fields
+    assert {{ module.class_name }}.id is not None
     {% for field in fields %}
-    assert "{{ field.name }}" in model_fields
+    assert {{ module.class_name }}.{{ field.name }} is not None
     {% endfor %}
 
 
 def test_{{ module.singular }}_serialization_returns_declared_fields() -> None:
     now = datetime.now(timezone.utc)
-    item = {{ module.class_name }}(
-        id=1,
+    item = {{ module.class_name }}()
+    item.id = 1
 {% for field in fields %}
-        {{ field.name }}={{ field.test_value }},
+    item.{{ field.name }} = {{ field.test_value }}
 {% endfor %}
 {% if not fields %}
-        name="example",
+    item.name = "example"
 {% endif %}
-        created_at=now,
-        updated_at=now,
-    )
+    item.created_at = now
+    item.updated_at = now
 
     data = item.to_dict()
     assert data["id"] == 1

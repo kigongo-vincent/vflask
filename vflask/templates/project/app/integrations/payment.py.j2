@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import os
 from importlib import import_module
-from typing import Any, Protocol, cast
+from typing import Protocol, cast
 
 import requests
+
+from app.base.types import JSONObject, json_object
 
 
 class PaymentProvider(Protocol):
@@ -16,9 +18,9 @@ class PaymentProvider(Protocol):
         email: str,
         transaction_reference: str,
         redirect_url: str,
-    ) -> dict[str, Any]: ...
+    ) -> JSONObject: ...
 
-    def verify_payment(self, transaction_id: str) -> dict[str, Any]: ...
+    def verify_payment(self, transaction_id: str) -> JSONObject: ...
 
 
 class FlutterwavePaymentProvider:
@@ -26,7 +28,7 @@ class FlutterwavePaymentProvider:
 
     api_url = "https://api.flutterwave.com/v3"
 
-    def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+    def _request(self, method: str, path: str, payload: JSONObject | None = None) -> JSONObject:
         secret_key = os.getenv("FLW_SECRET_KEY")
         if not secret_key:
             raise RuntimeError("FLW_SECRET_KEY is required for Flutterwave payments")
@@ -35,13 +37,16 @@ class FlutterwavePaymentProvider:
             f"{self.api_url}{path}",
             headers={"Authorization": f"Bearer {secret_key}"},
             timeout=20,
-            **kwargs,
+            json=payload,
         )
         response.raise_for_status()
-        result = response.json()
+        result = json_object(response.json())
         if result.get("status") != "success":
             raise RuntimeError("Flutterwave rejected the payment request")
-        return cast(dict[str, Any], result["data"])
+        data = result.get("data")
+        if not isinstance(data, dict):
+            raise RuntimeError("Flutterwave returned an invalid payment response")
+        return data
 
     def create_payment(
         self,
@@ -51,11 +56,11 @@ class FlutterwavePaymentProvider:
         email: str,
         transaction_reference: str,
         redirect_url: str,
-    ) -> dict[str, Any]:
+    ) -> JSONObject:
         return self._request(
             "POST",
             "/payments",
-            json={
+            payload={
                 "tx_ref": transaction_reference,
                 "amount": amount,
                 "currency": currency,
@@ -64,7 +69,7 @@ class FlutterwavePaymentProvider:
             },
         )
 
-    def verify_payment(self, transaction_id: str) -> dict[str, Any]:
+    def verify_payment(self, transaction_id: str) -> JSONObject:
         return self._request("GET", f"/transactions/{transaction_id}/verify")
 
 

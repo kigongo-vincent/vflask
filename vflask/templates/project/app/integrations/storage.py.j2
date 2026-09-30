@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from importlib import import_module
-from typing import Any, BinaryIO, Protocol, cast
+from typing import BinaryIO, Protocol, cast
 
 class StorageProvider(Protocol):
     def upload(self, file: BinaryIO, *, key: str, content_type: str | None = None) -> str: ...
@@ -17,7 +17,7 @@ class S3StorageProvider:
         bucket = os.getenv("S3_BUCKET")
         if not bucket:
             raise RuntimeError("S3_BUCKET is required for S3 storage")
-        extra_args: dict[str, Any] = {}
+        extra_args: dict[str, str] = {}
         if content_type:
             extra_args["ContentType"] = content_type
         boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1")).upload_fileobj(

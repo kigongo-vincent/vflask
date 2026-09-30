@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+{% if needs_date_import %}
+from datetime import date, datetime
+{% endif %}
+{% if needs_decimal_import %}
+from decimal import Decimal
+{% endif %}
+from sqlalchemy.orm import Mapped, mapped_column
 
+from app.base.types import JSONObject, to_json_value
 from app.extensions import db
 from app.shared.mixins import SoftDeleteMixin, TimestampMixin
 
@@ -12,24 +19,24 @@ class {{ module.class_name }}(SoftDeleteMixin, TimestampMixin, db.Model):
     """{{ module.class_name }} model."""
     __tablename__ = "{{ module.table_name }}"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
 {% for field in fields %}
-    {{ field.name }} = db.Column({{ field.sqlalchemy_type }}{% if field.nullable %}, nullable=True{% else %}, nullable=False{% endif %}{% if field.unique %}, unique=True{% endif %}{% if field.index %}, index=True{% endif %}{% if field.default %}, default={{ field.default }}{% endif %})
+    {{ field.name }}: Mapped[{{ field.python_type }}{% if field.nullable %} | None{% endif %}] = mapped_column({{ field.sqlalchemy_type }}{% if field.nullable %}, nullable=True{% else %}, nullable=False{% endif %}{% if field.unique %}, unique=True{% endif %}{% if field.index %}, index=True{% endif %}{% if field.default %}, default={{ field.default }}{% endif %})
 {% endfor %}
 {% if not fields %}
-    name = db.Column(db.String(255), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(db.String(255), nullable=False, index=True)
 {% endif %}
 
-    def to_dict(self) -> dict[str, Any]:
-        data: dict[str, Any] = {
-            "id": self.id,
+    def to_dict(self) -> JSONObject:
+        data: JSONObject = {
+            "id": to_json_value(self.id),
 {% for field in fields %}
-            "{{ field.name }}": self.{{ field.name }},
+            "{{ field.name }}": to_json_value(self.{{ field.name }}),
 {% endfor %}
 {% if not fields %}
-            "name": self.name,
+            "name": to_json_value(self.name),
 {% endif %}
         }
-        data["createdAt"] = self.created_at.isoformat()
-        data["updatedAt"] = self.updated_at.isoformat()
+        data["createdAt"] = to_json_value(self.created_at)
+        data["updatedAt"] = to_json_value(self.updated_at)
         return data

@@ -34,7 +34,10 @@ def test_user(app):
     with app.app_context():
         user = _db.session.query(User).filter_by(email="admin@example.com").first()
         if not user:
-            user = User(email="admin@example.com", name="Test Admin", is_active=True)
+            user = User()
+            user.email = "admin@example.com"
+            user.name = "Test Admin"
+            user.is_active = True
             user.set_password("Admin123!")
             _db.session.add(user)
             _db.session.commit()

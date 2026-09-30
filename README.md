@@ -1,222 +1,159 @@
 # vflask
 
-vflask is a modern Flask framework starter built for developers who want the speed of scaffolding without losing the flexibility of raw Flask.
+### A practical foundation for Flask APIs
 
-If you like Flask but want the structure and conventions of a more opinionated framework, vflask gives you a strong starting point: typed project generation, module-based architecture, PostgreSQL defaults, JWT auth, role-based access control, Redis support, Docker-ready setup, and a CLI that turns a feature idea into a working app in minutes.
+vflask generates ordinary Flask and SQLAlchemy code with a clear application structure, typed CRUD modules, authentication, migrations, tests, API documentation, and a deployable container. You keep control of the code and can change the architecture as your product grows.
 
-This is the kind of framework that feels familiar to Flask developers, but removes the repetitive setup that slows teams down.
+`Python 3.11+` · `Flask 3` · `SQLAlchemy` · `PostgreSQL` · `Alembic`
 
-## Why developers choose vflask
+---
 
-- Flask-first, not framework-lock-in: you still write Flask code, but with a stronger project skeleton
-- Faster prototyping: generate a production-like app structure in one command
-- Safer defaults: PostgreSQL, env config, JWT auth, RBAC, Docker Compose included
-- Easier modularity: create modules with typed fields and automatic route/service/model scaffolds
-- Better team workflow: generated docs and watch mode keep module structure readable
-- Less boilerplate: no need to manually wire common app patterns every time
+## Why vflask
 
-## Install globally
+Flask is a strong choice when you want explicit control over request handling, dependencies, and service boundaries. vflask removes repetitive setup without hiding Flask behind a new runtime abstraction.
 
-```bash
-python3 -m pip install vflask
-```
+Choose it when you want to:
 
-If you want the latest unreleased version from a local checkout instead, use a venv for that workflow, but for normal end-user usage the intended install is a global pip install.
+- Start with an app factory, configuration, auth, database, and test structure already connected.
+- Generate consistent CRUD modules from field definitions instead of repeating model/route boilerplate.
+- Keep OpenAPI documentation and focused tests beside the generated feature.
+- Adopt provider interfaces and a CI/deployment baseline while retaining the option to replace them.
+
+### When it may not fit
+
+Choose another starting point if you need a batteries-included admin framework, a managed hosting platform, or an async-first application. The scaffold gives you service adapters, not ready-made payment, upload, or background-job products. You decide the business rules, cloud resources, and production operations.
 
 ## Quick start
 
-Create a project:
+Install the CLI and generate a project:
 
 ```bash
-vflask new myapp
-cd myapp
+python -m pip install vflask
+vflask new bookstore
+cd bookstore
 ```
 
-Create a module:
+Add a feature:
 
 ```bash
-vflask module create sales \
+vflask module create products \
   -f name:string:required \
-  -f amount:float \
-  -f status:string:index \
-  -r admin \
-  -r editor
+  -f price:decimal:required \
+  -f sku:string:unique \
+  -r admin -r editor
 ```
 
-Start the generated app:
+Run the application through the CLI:
 
 ```bash
-./scripts/start.sh
+vflask run
 ```
 
-Open the app and you will already have:
+`vflask run` creates `.env` from `.env.example` if needed, starts healthy local Postgres and Redis services with Docker Compose, applies generated Alembic revisions, creates missing tables and default roles, then launches Flask at `http://127.0.0.1:5000`. Use `vflask run --no-services` when connecting to services you manage yourself. Run `vflask run --help` for host and port options.
 
-- a Flask app factory
-- configured app extensions
-- PostgreSQL connection settings
-- Redis support
-- a default user and role system
-- a module layout with routes, handlers, and models
-
-## What vflask generates
-
-Every new project gives you a ready-to-use Flask application with a structure designed for real-world backend work.
-
-### Included by default
-
-- PostgreSQL configuration with `psycopg[binary]`
-- Redis-ready environment variables
-- JWT authentication setup
-- role-aware access helpers
-- app factory pattern
-- modular project layout
-- Docker Compose for local services
-- module generation commands
-- docs generation and watch mode
-
-### Example generated app structure
+Check the API and tests:
 
 ```text
-myapp/
-├── app/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── extensions.py
-│   ├── base.py
-│   ├── shared/
-│   └── modules/
-├── migrations/
-├── tests/
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example
-├── README.md
-├── scripts/
-│   ├── start.sh
-│   ├── push.sh
-│   └── help.sh
-└── .venv/
+Swagger UI   http://127.0.0.1:5000/api/v1/docs
+OpenAPI      http://127.0.0.1:5000/api/v1/openapi.json
 ```
-
-## Core CLI commands
-
-### New project
 
 ```bash
-vflask new myapp
+pytest -q
 ```
 
-Creates a new Flask app scaffold in a new folder.
+## Architecture
 
-### Module creation
-
-```bash
-vflask module create orders \
-  -f order_id:string:required \
-  -f total:float \
-  -f status:string:index \
-  -r admin \
-  -r editor
+```text
+app/
+  auth/          JWT auth and Google OAuth routes
+  base/          API responses, JSON types, query filters, OpenAPI reflection
+  integrations/  payment, storage, mail, and OAuth provider adapters
+  shared/        users, roles, timestamps, and RBAC
+  modules/       generated models, services, handlers, routes, docs, and tests
+migrations/      Alembic environment, revisions, and version history
+tests/           application-level pytest fixtures
+.github/         CI and EC2 deployment workflows
+Dockerfile       non-root Gunicorn runtime
+docker-compose.yml app + PostgreSQL + Redis development network
 ```
 
-Generates a full module with:
+Generated modules are regular Python packages registered as Flask blueprints. Services contain database operations, handlers validate API input, and model serializers define the returned fields. Swagger reflects registered models and their serialized data.
 
-- model definition
-- service layer
-- handlers
-- routes
-- docs page
-- tests
+## Capabilities
 
-### Watch mode
+| Area        | Included scaffold                                                                           |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| Application | App factory, configuration, SQLAlchemy, Flask-Migrate, JWT, RBAC                            |
+| Modules     | Typed CRUD structure, per-module docs and tests, generated table migration                  |
+| Data        | PostgreSQL defaults, SQLite-friendly tests, automatic migration and missing-table bootstrap |
+| API         | Reflected OpenAPI 3, Swagger UI, paginated list endpoints (limit up to 100)                 |
+| Identity    | Signup/login, token verification/refresh, password recovery, profile, Google OAuth          |
+| Providers   | Flutterwave, S3 or Cloudinary, SMTP or SES; replaceable protocols                           |
+| Delivery    | Strict Pyright check, pytest, Compose smoke test, Docker image, EC2 workflow                |
 
-```bash
-vflask watch --project-root .
-```
+### Field definitions
 
-Watches module changes and refreshes generated docs when handlers change.
-
-## A real developer workflow
-
-A typical vflask workflow looks like this:
-
-```bash
-vflask new crm
-cd crm
-vflask module create leads \
-  -f name:string:required \
-  -f email:string:unique \
-  -f amount:float \
-  -r admin
-
-./scripts/start.sh
-```
-
-From there, you are operating inside a Flask project that already includes the structure most teams need but do not want to build from scratch each time.
-
-## Typed field system
-
-The scaffolder supports field definitions like this:
+Supported types: `string`, `text`, `integer`, `float`, `decimal`, `boolean`, `date`, `datetime`, `json`, and `uuid`. Flags: `required`, `unique`, `index`, `nullable`, and `default=value`.
 
 ```text
 name:string:required
-amount:float
-status:string:index
-email:string:unique
-created_at:datetime
+sku:string:unique
+price:decimal:required
+metadata:json
 ```
 
-This becomes the core of generated models and keeps your schema definitions clean and readable.
+## Database lifecycle
 
-### Supported field types
+Each newly generated module includes an Alembic revision linked to the current migration head. `vflask run` applies those revisions before starting the app, then runs an idempotent bootstrap for missing tables and default roles. Container startup follows the same sequence. No known-password admin user is created.
 
-- `string`
-- `text`
-- `integer`
-- `float`
-- `decimal`
-- `boolean`
-- `date`
-- `datetime`
-- `json`
-- `uuid`
+For hand-edited model changes or data migrations, generate and review a revision:
 
-### Supported field flags
+```bash
+APP_ENV=development flask --app app:create_app db migrate -m "describe schema change"
+APP_ENV=development flask --app app:create_app db upgrade
+```
 
-- `required` / `notnull` / `nonnullable`
-- `unique`
-- `index`
-- `default=value`
-- `nullable`
+Commit the revision with the model change. `db.create_all()` only creates absent tables; it does not alter existing tables, so column changes and renames belong in Alembic migrations.
 
-## Why this is useful for Flask teams
+## Auth and API docs
 
-This is not just a project template. It is a practical productivity layer for Flask developers.
+Auth routes are under `/api/v1/auth`. Google sign-in is an authorization-code flow: configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the exact public `GOOGLE_REDIRECT_URI`; request `/api/v1/auth/google/authorization-url`; redirect the client to its returned URL; then send Google's `code` and signed `state` to `/api/v1/auth/google/callback`. The server exchanges the code, requires a verified email, and returns app JWTs.
 
-It helps teams do all of the following without adding a lot of framework ceremony:
+OpenAPI is available at `/api/v1/openapi.json`; Swagger UI is at `/api/v1/docs`. Per-module Markdown remains available at `/api/v1/docs/<module>`. Generated list routes require positive `pagination.page` and `pagination.limit`; the maximum limit is 100.
 
-- generate consistent app structure
-- scaffold CRUD modules fast
-- reuse role-based access patterns
-- keep route/service/model organization consistent
-- reduce the time spent wiring the boring parts of backend apps
-- maintain cleaner project conventions across multiple services
+## Providers
 
-## Built for real backend work
+Use `get_payment_provider()`, `get_storage_provider()`, and `get_mailer()` from `app.integrations`.
 
-The generated app is not a toy app. It is structured with practical backend concerns in mind:
+| Service | Default     | Alternatives                          | Selection                                     |
+| ------- | ----------- | ------------------------------------- | --------------------------------------------- |
+| Payment | Flutterwave | Custom`PaymentProvider`               | `PAYMENT_PROVIDER` / `PAYMENT_PROVIDER_CLASS` |
+| Storage | S3          | Cloudinary or custom`StorageProvider` | `STORAGE_PROVIDER` / `STORAGE_PROVIDER_CLASS` |
+| Email   | SMTP        | Amazon SES or custom`MailProvider`    | `MAIL_PROVIDER` / `MAIL_PROVIDER_CLASS`       |
 
-- Redis and PostgreSQL support
-- JWT auth
-- role checks for API access
-- service-oriented modules
-- module docs generation
-- local Docker services for development
+Provider credentials are environment-driven. For production S3 and SES, attach an IAM role to EC2 instead of storing AWS access keys. Scope S3 access to the required bucket/prefix and SES access to the verified sender identity. Add payment verification, upload authorization, and other product rules in your own service layer; the scaffold does not expose generic provider endpoints.
 
-This makes vflask useful for internal tools, SaaS backends, CRUD-heavy APIs, admin apps, and operational tooling built with Flask.
+## Deployment
 
-## Summary
+The generated Docker image runs Gunicorn as a non-root user. GitHub Actions runs tests and strict Pyright, starts app/Postgres/Redis with Compose, and probes the app health endpoint. On pushes to `main`, the deployment workflow publishes to Docker Hub, applies committed migrations, and replaces the EC2 container.
 
-vflask is for Flask developers who want more structure, better conventions, and faster scaffolding without abandoning the simplicity and flexibility that makes Flask great.
+Configure repository secrets:
 
-It turns a blank Flask project into a usable, structured backend foundation in minutes — while still letting you stay close to the framework you already know.
+```text
+DOCKER_PAT       DOCKER_USERNAME
+EC2_HOST         EC2_USER
+EC2_SSH_KEY      PROJECT_NAME
+ENV_FILE
+```
+
+`ENV_FILE` is the complete production environment file. Use independent signing keys of at least 32 characters and a reachable production `DATABASE_URL`. Production startup rejects placeholder secrets and localhost database URLs. Install Docker Engine on EC2, grant the deploy user Docker access, and put a TLS-terminating reverse proxy in front of port 5000. The deployment baseline does not provision a production database or cloud IAM resources.
+
+## CLI reference
+
+```bash
+vflask new <project>                # Create a project
+vflask module create <name> -f ... # Create a module and migration
+vflask run                          # Prepare local services and run Flask
+vflask watch --project-root .        # Regenerate module docs on changes
+```

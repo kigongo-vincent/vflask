@@ -15,18 +15,37 @@ cp .env.example .env
 ## Project commands
 
 ```bash
-./scripts/start.sh
+vflask run
 ./scripts/push.sh
-./scripts/help.sh
+vflask --help
 ```
 
-### Start the app
+### Run the app
 
 ```bash
-./scripts/start.sh
+vflask run
 ```
 
-This creates the venv if needed, installs dependencies, copies `.env.example` if missing, starts Postgres and Redis, and launches the Flask dev server.
+This creates `.env` from `.env.example` when needed, starts healthy Postgres and Redis services with Compose, applies module migrations, creates missing tables and default roles, and starts Flask. Use `vflask run --no-services` with an external database and Redis. Run `vflask run --help` for host and port options. `scripts/start.sh` remains a compatibility wrapper around this command.
+
+The example environment contains placeholders. For production, replace both signing keys with independent random values of at least 32 characters and set `DATABASE_URL` to a reachable database. The Docker image runs with `APP_ENV=production` and refuses placeholder keys or localhost database URLs.
+
+Run generated tests with `pytest -q`. Each module includes `app/modules/<module>/test_module.py`, which checks its declared columns and serialized response fields.
+
+## API docs and auth
+
+- Swagger UI: `/api/v1/docs`
+- OpenAPI JSON: `/api/v1/openapi.json`
+- Module Markdown index: `/api/v1/docs/modules.json`
+
+OpenAPI schemas reflect registered SQLAlchemy model fields and generated response data. List requests must include positive `pagination.page` and `pagination.limit` values; the maximum limit is 100.
+
+The auth API includes signup, login, token verification and refresh, OTP/password reset, profile, and logout. Google OAuth is configured with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the public callback URL in `GOOGLE_REDIRECT_URI`:
+
+1. Call `GET /api/v1/auth/google/authorization-url` and redirect the client to the returned `authorization_url`.
+2. Return Google's `code` and signed `state` to `GET` or `POST /api/v1/auth/google/callback`.
+
+The callback exchanges the code with Google, requires a verified email address, and returns app access and refresh tokens.
 
 ## Integrations
 
@@ -37,13 +56,43 @@ Provider contracts live under `app/integrations` and can be replaced with a dott
 - Email: `MAIL_PROVIDER=smtp` by default; `ses` uses Amazon SES. Custom adapters use `MAIL_PROVIDER_CLASS`.
 - Google OAuth: configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the exact public callback URL in `GOOGLE_REDIRECT_URI`. Request `/api/v1/auth/google/authorization-url`, then return Google's `code` and signed `state` to `/api/v1/auth/google/callback`.
 
+Use the default adapters through `app.integrations`:
+
+```python
+from app.integrations import get_mailer, get_payment_provider, get_storage_provider
+
+payment = get_payment_provider()
+payment.create_payment(
+	amount=25.0,
+	currency="USD",
+	email="customer@example.com",
+	transaction_reference="order-123",
+	redirect_url="https://example.com/payment/complete",
+)
+
+get_mailer().send(to="customer@example.com", subject="Receipt", text="Payment received")
+CI runs tests and strict Pyright, starts app/Postgres/Redis using Compose networking, and probes the app health endpoint before publishing the image to Docker Hub and deploying it to EC2. Configure repository secrets `DOCKER_PAT`, `DOCKER_USERNAME`, `EC2_HOST`, `EC2_SSH_KEY`, `EC2_USER`, `ENV_FILE`, and `PROJECT_NAME`.
+
+Storage adapters implement `upload(file, key=..., content_type=...)` and `delete(key)`. S3 returns an `s3://bucket/key` reference; Cloudinary returns its secure URL. AWS credentials use boto3's standard credential chain.
+
+For S3 and SES in production, attach an IAM role to the EC2 instance rather than setting long-lived AWS keys. Limit S3 access to the required bucket/prefix (`s3:PutObject` and `s3:DeleteObject`) and SES access to the verified sender identity (`ses:SendEmail`).
+
 Keep production credentials in a secret manager or deployment environment, never in source control. Replace `SECRET_KEY` and `JWT_SECRET_KEY` with independent random values before deployment.
 
 ## Docker deployment
 
 Build and run locally with `docker build -t {{ project_name }} .`. The GitHub workflows run tests and build the image, then publish it to Docker Hub and deploy it to EC2. Configure repository secrets `DOCKER_PAT`, `DOCKER_USERNAME`, `EC2_HOST`, `EC2_SSH_KEY`, `EC2_USER`, `ENV_FILE`, and `PROJECT_NAME`. `ENV_FILE` must contain the production environment file contents; set its `DATABASE_URL` to a managed production database, since the EC2 workflow deploys only the application container.
 
-Install Docker Engine on the EC2 host, grant `EC2_USER` permission to run Docker, and allow inbound traffic on port 5000 (or place a TLS-terminating reverse proxy in front of it). After creating modules or changing models, generate and commit migrations locally with `APP_ENV=development flask --app app:create_app db migrate -m "describe schema change"`; deployment runs `flask --app app:create_app db upgrade` before replacing the running container.
+Install Docker Engine on the EC2 host, grant `EC2_USER` permission to run Docker, and allow inbound traffic on port 5000 (or place a TLS-terminating reverse proxy in front of it). Creating a module generates its table migration automatically. Local startup and the production container apply committed revisions and create missing tables before serving requests.
+
+For manual model edits or data migrations, generate and review an Alembic revision locally:
+
+```bash
+APP_ENV=development flask --app app:create_app db migrate -m "describe schema change"
+APP_ENV=development flask --app app:create_app db upgrade
+```
+
+Deployment applies committed migrations before replacing the running container. The EC2 host must be able to reach the production database configured in `ENV_FILE`. `db.create_all()` creates missing tables but does not alter existing ones; use Alembic revisions for schema changes. CI runs `pytest`, strict `pyright`, and a Compose health check for the app/Postgres/Redis network.
 
 ### Push changes
 

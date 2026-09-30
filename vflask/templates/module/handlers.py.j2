@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from flask import Response, request
 
 from app.base import api_error, api_ok, paginated_response
+from app.base.types import JSONObject, json_object
 from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
 
 
@@ -18,14 +17,17 @@ class {{ module.class_name }}Handler:
 
     def list(self) -> tuple[Response, int]:
         """List {{ module.table_name }} with pagination and filters."""
-        req: dict[str, Any] = request.get_json(silent=True) or {}
-        pagination: dict[str, Any] = req.get("pagination", {})
-        if not isinstance(pagination, dict):
+        req = json_object(request.get_json(silent=True))
+        pagination_value = req.get("pagination", {})
+        if not isinstance(pagination_value, dict):
             return api_error("Invalid payload: pagination with page and limit required")
+        pagination = pagination_value
 
         page_value = pagination.get("page")
         limit_value = pagination.get("limit")
-        if page_value is None or limit_value is None:
+        if not isinstance(page_value, (int, str)) or isinstance(page_value, bool):
+            return api_error("Invalid payload: pagination with page and limit required")
+        if not isinstance(limit_value, (int, str)) or isinstance(limit_value, bool):
             return api_error("Invalid payload: pagination with page and limit required")
 
         try:
@@ -54,7 +56,7 @@ class {{ module.class_name }}Handler:
 
     def create(self) -> tuple[Response, int]:
         """Create a new {{ module.singular }}."""
-        body: dict[str, Any] = request.get_json(silent=True) or {}
+        body: JSONObject = json_object(request.get_json(silent=True))
         if not body:
             return api_error("Invalid payload")
         try:
@@ -72,7 +74,7 @@ class {{ module.class_name }}Handler:
 
     def update(self, item_id: int) -> tuple[Response, int]:
         """Update a {{ module.singular }}."""
-        body: dict[str, Any] = request.get_json(silent=True) or {}
+        body: JSONObject = json_object(request.get_json(silent=True))
         item = self.service.update_{{ module.singular }}(item_id, body)
         if not item:
             return api_error("{{ module.class_name }} not found", 404)
@@ -86,9 +88,11 @@ class {{ module.class_name }}Handler:
 
     def bulk_delete(self) -> tuple[Response, int]:
         """Soft delete multiple {{ module.table_name }}."""
-        body: dict[str, Any] = request.get_json(silent=True) or {}
+        body: JSONObject = json_object(request.get_json(silent=True))
         ids = body.get("ids", [])
-        if not isinstance(ids, list) or not all(isinstance(item, int) for item in ids):
+        if not isinstance(ids, list) or not all(
+            isinstance(item, int) and not isinstance(item, bool) for item in ids
+        ):
             return api_error("Invalid payload: ids array required")
-        count = self.service.bulk_delete(ids)
+        count = self.service.bulk_delete([item for item in ids if isinstance(item, int)])
         return api_ok({"deleted": count}, msg="bulk deleted successfully")

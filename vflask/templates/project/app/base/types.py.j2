@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime
+from decimal import Decimal
+from typing import TypeAlias, cast
+
+JSONScalar: TypeAlias = str | int | float | bool | None
+JSONValue: TypeAlias = JSONScalar | Sequence["JSONValue"] | Mapping[str, "JSONValue"]
+JSONObject: TypeAlias = dict[str, JSONValue]
+
+
+def to_json_value(value: object) -> JSONValue:
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, Mapping):
+        mapping = cast(Mapping[object, object], value)
+        return {str(key): to_json_value(item) for key, item in mapping.items()}
+    if isinstance(value, (list, tuple)):
+        sequence = cast(Sequence[object], value)
+        return [to_json_value(item) for item in sequence]
+    return str(value)
+
+
+def json_object(value: object) -> JSONObject:
+    if not isinstance(value, Mapping):
+        return {}
+    mapping = cast(Mapping[object, object], value)
+    return {str(key): to_json_value(item) for key, item in mapping.items()}

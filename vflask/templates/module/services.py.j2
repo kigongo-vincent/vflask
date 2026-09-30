@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from app.base.query import apply_filters
+from app.base.types import JSONObject
 from app.extensions import db
 from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
 
@@ -24,32 +23,38 @@ class {{ module.class_name }}Service:
     def __init__(self) -> None:
         self.db = db
 
-    def list_{{ module.table_name }}(self, req: dict[str, Any]) -> tuple[list[{{ module.class_name }}], int]:
+    def list_{{ module.table_name }}(self, req: JSONObject) -> tuple[list[{{ module.class_name }}], int]:
         """List {{ module.table_name }} with filtering and pagination."""
-        pagination: dict[str, Any] = req.get("pagination", {})
+        pagination_value = req.get("pagination", {})
+        if not isinstance(pagination_value, dict):
+            raise ValueError("pagination with page and limit required")
+        pagination = pagination_value
         page = pagination.get("page")
         limit = pagination.get("limit")
 
-        if page is None or limit is None:
+        if not isinstance(page, int) or isinstance(page, bool):
+            raise ValueError("pagination with page and limit required")
+        if not isinstance(limit, int) or isinstance(limit, bool):
             raise ValueError("pagination with page and limit required")
 
-        page = int(page)
-        limit = int(limit)
         if page <= 0 or limit <= 0 or limit > 100:
             raise ValueError("pagination with page and limit required; limit > 100 is not allowed")
 
         query = self.db.session.query({{ module.class_name }})
 
         # Exclude soft-deleted by default
-        if not any(f.get("column") == "trashed" for f in req.get("columns", [])):
+        columns_value = req.get("columns", [])
+        columns = [column for column in columns_value if isinstance(column, dict)] if isinstance(columns_value, list) else []
+        if not any(f.get("column") == "trashed" for f in columns):
             query = query.filter({{ module.class_name }}.deleted_at.is_(None))
 
         # Apply filters
-        query = apply_filters(query, {{ module.class_name }}, req.get("columns", []), FILTERABLE)
+        query = apply_filters(query, {{ module.class_name }}, columns, FILTERABLE)
 
         # Search
-        if req.get("search"):
-            term = f"%{req['search']}%"
+        search_value = req.get("search")
+        if isinstance(search_value, str) and search_value:
+            term = f"%{search_value}%"
 {% if fields %}
             query = query.filter(
 {% for field in fields if field.type in ('string', 'text') %}
@@ -73,14 +78,14 @@ class {{ module.class_name }}Service:
         """Get a single {{ module.singular }} by ID."""
         return self.db.session.get({{ module.class_name }}, item_id)
 
-    def create_{{ module.singular }}(self, data: dict[str, Any]) -> {{ module.class_name }}:
+    def create_{{ module.singular }}(self, data: JSONObject) -> {{ module.class_name }}:
         """Create a new {{ module.singular }}."""
         item = {{ module.class_name }}(**data)
         self.db.session.add(item)
         self.db.session.commit()
         return item
 
-    def update_{{ module.singular }}(self, item_id: int, updates: dict[str, Any]) -> {{ module.class_name }} | None:
+    def update_{{ module.singular }}(self, item_id: int, updates: JSONObject) -> {{ module.class_name }} | None:
         """Update an existing {{ module.singular }}."""
         item = self.get_{{ module.singular }}(item_id)
         if not item or item.deleted_at:

@@ -1,0 +1,35 @@
+from __future__ import annotations
+
+from app.extensions import db
+from app.shared.models import Role, User
+
+
+class RBACService:
+    @staticmethod
+    def seed_roles() -> None:
+        defaults = [
+            ("admin", "Full access"),
+            ("editor", "Can edit records"),
+            ("viewer", "Read-only access"),
+        ]
+        for name, description in defaults:
+            if db.session.query(Role).filter_by(name=name).first():
+                continue
+            role = Role()
+            role.name = name
+            role.description = description
+            db.session.add(role)
+        db.session.commit()
+
+    @staticmethod
+    def assign_role(user: User, role_name: str) -> None:
+        role = db.session.query(Role).filter_by(name=role_name).first()
+        if role is not None and role not in user.roles:
+            user.roles.append(role)
+            db.session.commit()
+
+    @staticmethod
+    def user_has_role(user: User, *required_roles: str) -> bool:
+        if not required_roles:
+            return True
+        return bool({role.name for role in user.roles} & set(required_roles))

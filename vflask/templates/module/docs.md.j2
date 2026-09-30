@@ -16,6 +16,16 @@ Auto-generated documentation for the `{{ module.table_name }}` module.
 | updated_at | DateTime | No | No | No |
 | deleted_at | DateTime | Yes | No | No |
 
+Serialized records include `id`, each declared field, `createdAt`, and `updatedAt`. The generated test file `test_module.py` checks declared columns and serialized fields.
+
+Creating this module also creates an Alembic table migration in `migrations/versions`. Local startup and the production container apply available revisions automatically.
+
+## API reference
+
+Swagger UI is available at `/api/v1/docs`; the OpenAPI document is at `/api/v1/openapi.json`. The `{{ module.class_name }}` response schema is reflected from the registered SQLAlchemy model and matches the fields returned by `to_dict()`.
+
+List requests require both `pagination.page` and `pagination.limit` as positive integers. The maximum limit is 100.
+
 ## Endpoints
 
 | Method | Path | Auth | Roles | Description |

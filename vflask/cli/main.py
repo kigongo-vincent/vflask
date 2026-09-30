@@ -33,12 +33,13 @@ def module_group() -> None:
 @click.argument("module_name")
 @click.option("-f", "--field", "fields", multiple=True, help="Field definition as name:type[:flag]. Example: name:string:index")
 @click.option("-r", "--role", "roles", multiple=True, default=("admin",), show_default=True, help="Roles allowed to access the module.")
+@click.option("-m", "--mode", "crud_mode", type=click.Choice(["c", "cr", "crd", "crud"], case_sensitive=False), default="crud", show_default=True, help="CRUD generation mode shorthand: c, cr, crd, or crud.")
 @click.option("--project-root", default=".", show_default=True, help="Root of the generated project.")
-def create_module(module_name: str, fields: tuple[str, ...], roles: tuple[str, ...], project_root: str) -> None:
+def create_module(module_name: str, fields: tuple[str, ...], roles: tuple[str, ...], crud_mode: str, project_root: str) -> None:
     """Create a Flask module inside an existing project."""
     project_dir = Path(project_root).resolve()
     parsed_fields = [parse_field_spec(spec) for spec in fields]
-    ModuleScaffolder.create_module(project_dir, module_name, parsed_fields, list(roles))
+    ModuleScaffolder.create_module(project_dir, module_name, parsed_fields, list(roles), crud_mode=crud_mode.lower())
     click.echo(f"✅ Created module '{module_name}' in {project_dir / 'app' / 'modules'}")
 
 

@@ -11,7 +11,8 @@ def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
     assert (project_dir / "docker-compose.yml").exists()
     assert (project_dir / "app" / "__init__.py").exists()
     assert (project_dir / "app" / "config.py").exists()
-    assert (project_dir / "app" / "base.py").exists()
+    assert (project_dir / "app" / "base" / "__init__.py").exists()
+    assert (project_dir / "app" / "base" / "query.py").exists()
 
 
 def test_module_scaffolder_creates_model_and_routes(tmp_path: Path) -> None:
@@ -25,10 +26,13 @@ def test_module_scaffolder_creates_model_and_routes(tmp_path: Path) -> None:
             {"name": "amount", "type": "float", "nullable": False, "unique": False, "index": False},
         ],
         roles=["admin", "editor"],
+        crud_mode="crud",
     )
 
     module_dir = project_dir / "app" / "modules" / "sales"
     assert (module_dir / "models.py").exists()
     assert (module_dir / "routes.py").exists()
+    assert (module_dir / "docs.md").exists()
+    assert (module_dir / "test_module.py").exists()
     assert "role_required" in (module_dir / "routes.py").read_text()
     assert "customer_name" in (module_dir / "models.py").read_text()

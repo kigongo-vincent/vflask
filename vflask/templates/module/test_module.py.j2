@@ -1,0 +1,15 @@
+import pytest
+
+from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
+
+
+def test_{{ module.singular }}_model_field_names() -> None:
+    model_fields = {column.name for column in {{ module.class_name }}.__table__.columns}
+    assert "id" in model_fields
+    {% for field in fields %}
+    assert "{{ field.name }}" in model_fields
+    {% endfor %}
+
+
+def test_{{ module.singular }}_service_bootstrap() -> None:
+    assert {{ module.class_name }} is not None

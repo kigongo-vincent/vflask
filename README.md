@@ -27,6 +27,17 @@ vflask module create sales -f name:string -f amount:float -f status:string:index
 
 This keeps the project workflow to a single entry script, a single push script, and a quick help command.
 
+## Release to PyPI
+
+This repo includes a GitHub Action that publishes the package to PyPI when a version tag is pushed.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow in `.github/workflows/publish.yml` builds the package and publishes it through PyPI Trusted Publishing.
+
 ## Production bundle
 
 ```bash

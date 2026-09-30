@@ -1,0 +1,237 @@
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools>=69
+  - wheel
+* Getting build dependencies for sdist...
+running egg_info
+writing vflask.egg-info/PKG-INFO
+writing dependency_links to vflask.egg-info/dependency_links.txt
+writing entry points to vflask.egg-info/entry_points.txt
+writing requirements to vflask.egg-info/requires.txt
+writing top-level names to vflask.egg-info/top_level.txt
+reading manifest file 'vflask.egg-info/SOURCES.txt'
+writing manifest file 'vflask.egg-info/SOURCES.txt'
+* Installed build dependency versions:
+  - setuptools==84.0.0
+  - wheel==0.48.0
+* Building sdist...
+running sdist
+running egg_info
+writing vflask.egg-info/PKG-INFO
+writing dependency_links to vflask.egg-info/dependency_links.txt
+writing entry points to vflask.egg-info/entry_points.txt
+writing requirements to vflask.egg-info/requires.txt
+writing top-level names to vflask.egg-info/top_level.txt
+reading manifest file 'vflask.egg-info/SOURCES.txt'
+writing manifest file 'vflask.egg-info/SOURCES.txt'
+running check
+creating vflask-0.1.1
+creating vflask-0.1.1/tests
+creating vflask-0.1.1/vflask
+creating vflask-0.1.1/vflask.egg-info
+creating vflask-0.1.1/vflask/cli
+creating vflask-0.1.1/vflask/core
+creating vflask-0.1.1/vflask/templates/module
+creating vflask-0.1.1/vflask/templates/project
+creating vflask-0.1.1/vflask/templates/project/app
+creating vflask-0.1.1/vflask/templates/project/app/templates
+creating vflask-0.1.1/vflask/templates/project/migrations
+creating vflask-0.1.1/vflask/templates/project/scripts
+creating vflask-0.1.1/vflask/templates/project/tests
+copying files to vflask-0.1.1...
+copying README.md -> vflask-0.1.1
+copying pyproject.toml -> vflask-0.1.1
+copying tests/test_cli.py -> vflask-0.1.1/tests
+copying vflask/__init__.py -> vflask-0.1.1/vflask
+copying vflask.egg-info/PKG-INFO -> vflask-0.1.1/vflask.egg-info
+copying vflask.egg-info/SOURCES.txt -> vflask-0.1.1/vflask.egg-info
+copying vflask.egg-info/dependency_links.txt -> vflask-0.1.1/vflask.egg-info
+copying vflask.egg-info/entry_points.txt -> vflask-0.1.1/vflask.egg-info
+copying vflask.egg-info/requires.txt -> vflask-0.1.1/vflask.egg-info
+copying vflask.egg-info/top_level.txt -> vflask-0.1.1/vflask.egg-info
+copying vflask/cli/__init__.py -> vflask-0.1.1/vflask/cli
+copying vflask/cli/main.py -> vflask-0.1.1/vflask/cli
+copying vflask/cli/watch.py -> vflask-0.1.1/vflask/cli
+copying vflask/core/__init__.py -> vflask-0.1.1/vflask/core
+copying vflask/core/docgen.py -> vflask-0.1.1/vflask/core
+copying vflask/core/scaffolder.py -> vflask-0.1.1/vflask/core
+copying vflask/core/watcher.py -> vflask-0.1.1/vflask/core
+copying vflask/templates/module/__init__.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/docs.md.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/handlers.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/models.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/routes.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/services.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/module/test_module.py.j2 -> vflask-0.1.1/vflask/templates/module
+copying vflask/templates/project/README.md.j2 -> vflask-0.1.1/vflask/templates/project
+copying vflask/templates/project/app/cli.py.j2 -> vflask-0.1.1/vflask/templates/project/app
+copying vflask/templates/project/app/watcher.py.j2 -> vflask-0.1.1/vflask/templates/project/app
+copying vflask/templates/project/app/templates/base.html.j2 -> vflask-0.1.1/vflask/templates/project/app/templates
+copying vflask/templates/project/app/templates/logs.html.j2 -> vflask-0.1.1/vflask/templates/project/app/templates
+copying vflask/templates/project/migrations/env.py.j2 -> vflask-0.1.1/vflask/templates/project/migrations
+copying vflask/templates/project/scripts/build.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/dev.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/help.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/push.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/setup.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/start.sh.j2 -> vflask-0.1.1/vflask/templates/project/scripts
+copying vflask/templates/project/tests/conftest.py.j2 -> vflask-0.1.1/vflask/templates/project/tests
+copying vflask/templates/project/tests/helpers.py.j2 -> vflask-0.1.1/vflask/templates/project/tests
+Writing vflask-0.1.1/setup.cfg
+Creating tar archive
+removing 'vflask-0.1.1' (and everything under it)
+* Building wheel from sdist
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools>=69
+  - wheel
+* Getting build dependencies for wheel...
+running egg_info
+writing vflask.egg-info/PKG-INFO
+writing dependency_links to vflask.egg-info/dependency_links.txt
+writing entry points to vflask.egg-info/entry_points.txt
+writing requirements to vflask.egg-info/requires.txt
+writing top-level names to vflask.egg-info/top_level.txt
+reading manifest file 'vflask.egg-info/SOURCES.txt'
+writing manifest file 'vflask.egg-info/SOURCES.txt'
+* Installed build dependency versions:
+  - setuptools==84.0.0
+  - wheel==0.48.0
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build/lib/vflask
+copying vflask/__init__.py -> build/lib/vflask
+creating build/lib/vflask/core
+copying vflask/core/__init__.py -> build/lib/vflask/core
+copying vflask/core/docgen.py -> build/lib/vflask/core
+copying vflask/core/scaffolder.py -> build/lib/vflask/core
+copying vflask/core/watcher.py -> build/lib/vflask/core
+creating build/lib/vflask/cli
+copying vflask/cli/__init__.py -> build/lib/vflask/cli
+copying vflask/cli/watch.py -> build/lib/vflask/cli
+copying vflask/cli/main.py -> build/lib/vflask/cli
+running egg_info
+writing vflask.egg-info/PKG-INFO
+writing dependency_links to vflask.egg-info/dependency_links.txt
+writing entry points to vflask.egg-info/entry_points.txt
+writing requirements to vflask.egg-info/requires.txt
+writing top-level names to vflask.egg-info/top_level.txt
+reading manifest file 'vflask.egg-info/SOURCES.txt'
+writing manifest file 'vflask.egg-info/SOURCES.txt'
+creating build/lib/vflask/templates/module
+copying vflask/templates/module/models.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/__init__.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/handlers.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/routes.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/services.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/test_module.py.j2 -> build/lib/vflask/templates/module
+copying vflask/templates/module/docs.md.j2 -> build/lib/vflask/templates/module
+creating build/lib/vflask/templates/project
+copying vflask/templates/project/README.md.j2 -> build/lib/vflask/templates/project
+creating build/lib/vflask/templates/project/migrations
+copying vflask/templates/project/migrations/env.py.j2 -> build/lib/vflask/templates/project/migrations
+creating build/lib/vflask/templates/project/app
+copying vflask/templates/project/app/watcher.py.j2 -> build/lib/vflask/templates/project/app
+copying vflask/templates/project/app/cli.py.j2 -> build/lib/vflask/templates/project/app
+creating build/lib/vflask/templates/project/app/templates
+copying vflask/templates/project/app/templates/base.html.j2 -> build/lib/vflask/templates/project/app/templates
+copying vflask/templates/project/app/templates/logs.html.j2 -> build/lib/vflask/templates/project/app/templates
+creating build/lib/vflask/templates/project/tests
+copying vflask/templates/project/tests/conftest.py.j2 -> build/lib/vflask/templates/project/tests
+copying vflask/templates/project/tests/helpers.py.j2 -> build/lib/vflask/templates/project/tests
+creating build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/push.sh.j2 -> build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/help.sh.j2 -> build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/build.sh.j2 -> build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/dev.sh.j2 -> build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/start.sh.j2 -> build/lib/vflask/templates/project/scripts
+copying vflask/templates/project/scripts/setup.sh.j2 -> build/lib/vflask/templates/project/scripts
+installing to build/bdist.macosx-11.1-arm64/wheel
+running install
+running install_lib
+creating build/bdist.macosx-11.1-arm64/wheel
+creating build/bdist.macosx-11.1-arm64/wheel/vflask
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/core
+copying build/lib/vflask/core/__init__.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/core
+copying build/lib/vflask/core/docgen.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/core
+copying build/lib/vflask/core/scaffolder.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/core
+copying build/lib/vflask/core/watcher.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/core
+copying build/lib/vflask/__init__.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/cli
+copying build/lib/vflask/cli/__init__.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/cli
+copying build/lib/vflask/cli/watch.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/cli
+copying build/lib/vflask/cli/main.py -> build/bdist.macosx-11.1-arm64/wheel/./vflask/cli
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/module
+copying build/lib/vflask/templates/module/models.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/__init__.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/handlers.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/routes.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/services.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/test_module.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+copying build/lib/vflask/templates/module/docs.md.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/module
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project/migrations
+copying build/lib/vflask/templates/project/migrations/env.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/migrations
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project/app
+copying build/lib/vflask/templates/project/app/watcher.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/app
+copying build/lib/vflask/templates/project/app/cli.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/app
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project/app/templates
+copying build/lib/vflask/templates/project/app/templates/base.html.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/app/templates
+copying build/lib/vflask/templates/project/app/templates/logs.html.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/app/templates
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project/tests
+copying build/lib/vflask/templates/project/tests/conftest.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/tests
+copying build/lib/vflask/templates/project/tests/helpers.py.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/tests
+creating build/bdist.macosx-11.1-arm64/wheel/vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/push.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/help.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/build.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/dev.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/start.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/scripts/setup.sh.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project/scripts
+copying build/lib/vflask/templates/project/README.md.j2 -> build/bdist.macosx-11.1-arm64/wheel/./vflask/templates/project
+running install_egg_info
+Copying vflask.egg-info to build/bdist.macosx-11.1-arm64/wheel/./vflask-0.1.1-py3.13.egg-info
+running install_scripts
+creating build/bdist.macosx-11.1-arm64/wheel/vflask-0.1.1.dist-info/WHEEL
+creating '/Users/mac/Documents/playground/python/flask/01/vflask/dist/.tmp-2zw0f895/vflask-0.1.1-py3-none-any.whl' and adding 'build/bdist.macosx-11.1-arm64/wheel' to it
+adding 'vflask/__init__.py'
+adding 'vflask/cli/__init__.py'
+adding 'vflask/cli/main.py'
+adding 'vflask/cli/watch.py'
+adding 'vflask/core/__init__.py'
+adding 'vflask/core/docgen.py'
+adding 'vflask/core/scaffolder.py'
+adding 'vflask/core/watcher.py'
+adding 'vflask/templates/module/__init__.py.j2'
+adding 'vflask/templates/module/docs.md.j2'
+adding 'vflask/templates/module/handlers.py.j2'
+adding 'vflask/templates/module/models.py.j2'
+adding 'vflask/templates/module/routes.py.j2'
+adding 'vflask/templates/module/services.py.j2'
+adding 'vflask/templates/module/test_module.py.j2'
+adding 'vflask/templates/project/README.md.j2'
+adding 'vflask/templates/project/app/cli.py.j2'
+adding 'vflask/templates/project/app/watcher.py.j2'
+adding 'vflask/templates/project/app/templates/base.html.j2'
+adding 'vflask/templates/project/app/templates/logs.html.j2'
+adding 'vflask/templates/project/migrations/env.py.j2'
+adding 'vflask/templates/project/scripts/build.sh.j2'
+adding 'vflask/templates/project/scripts/dev.sh.j2'
+adding 'vflask/templates/project/scripts/help.sh.j2'
+adding 'vflask/templates/project/scripts/push.sh.j2'
+adding 'vflask/templates/project/scripts/setup.sh.j2'
+adding 'vflask/templates/project/scripts/start.sh.j2'
+adding 'vflask/templates/project/tests/conftest.py.j2'
+adding 'vflask/templates/project/tests/helpers.py.j2'
+adding 'vflask-0.1.1.dist-info/METADATA'
+adding 'vflask-0.1.1.dist-info/WHEEL'
+adding 'vflask-0.1.1.dist-info/entry_points.txt'
+adding 'vflask-0.1.1.dist-info/top_level.txt'
+adding 'vflask-0.1.1.dist-info/RECORD'
+removing build/bdist.macosx-11.1-arm64/wheel
+Successfully built vflask-0.1.1.tar.gz and vflask-0.1.1-py3-none-any.whl
+Checking dist/vflask-0.1.1-py3-none-any.whl: [32mPASSED[0m
+Checking dist/vflask-0.1.1.tar.gz: [32mPASSED[0m

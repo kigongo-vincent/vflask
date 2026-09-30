@@ -2,8 +2,8 @@ name: Publish to PyPI
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -27,7 +27,9 @@ jobs:
           python -m pip install build twine
 
       - name: Build package
-        run: python -m build
+        run: |
+          rm -rf dist
+          python -m build
 
       - name: Validate package metadata
         run: python -m twine check dist/*
@@ -36,4 +38,4 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: python -m twine upload dist/*
+        run: python -m twine upload --skip-existing dist/*

@@ -9,6 +9,7 @@ def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
 
     assert (project_dir / "requirements.txt").exists()
     assert (project_dir / "docker-compose.yml").exists()
+    assert (project_dir / "pyrightconfig.json").exists()
     assert (project_dir / "app" / "__init__.py").exists()
     assert (project_dir / "app" / "config.py").exists()
     assert (project_dir / "app" / "base" / "__init__.py").exists()

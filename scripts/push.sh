@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MESSAGE="${1:-chore: update project}"
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+git status --short
+
+git add .
+git commit -m "$MESSAGE" || {
+  echo "ℹ️ No changes to commit."
+  exit 0
+}
+
+git push
+
+echo "✅ Changes pushed successfully."

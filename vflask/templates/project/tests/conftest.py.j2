@@ -1,0 +1,53 @@
+"""Test fixtures."""
+
+from __future__ import annotations
+
+import pytest
+
+from app import create_app
+from app.config.settings import TestingConfig
+from app.extensions import db as _db
+from app.shared.models import User
+from app.shared.rbac import RBACService
+
+
+@pytest.fixture(scope="session")
+def app():
+    """Create test app."""
+    _app = create_app(TestingConfig)
+    with _app.app_context():
+        _db.create_all()
+        RBACService.seed_roles()
+        yield _app
+        _db.drop_all()
+
+
+@pytest.fixture
+def client(app):
+    """Create test client."""
+    return app.test_client()
+
+
+@pytest.fixture
+def test_user(app):
+    """Create a test user."""
+    with app.app_context():
+        user = _db.session.query(User).filter_by(email="admin@example.com").first()
+        if not user:
+            user = User(email="admin@example.com", name="Test Admin", is_active=True)
+            user.set_password("Admin123!")
+            _db.session.add(user)
+            _db.session.commit()
+            RBACService.assign_role(user, "admin")
+        return user
+
+
+@pytest.fixture
+def auth_headers(client, test_user):
+    """Get auth headers."""
+    res = client.post("/api/v1/auth/login", json={
+        "email": "admin@example.com",
+        "password": "Admin123!",
+    })
+    token = res.get_json()["data"]["token"]
+    return {"Authorization": f"Bearer {token}"}

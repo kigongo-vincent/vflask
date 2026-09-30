@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Setting up {{ project_name }}..."
+
+# Create venv
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -e ".[dev]"
+
+# Copy env
+if [ ! -f .env ]; then
+    cp .env.example .env
+    echo "✅ Created .env from .env.example"
+fi
+
+# Start Docker services
+echo "🐳 Starting PostgreSQL and Redis..."
+docker compose up -d db redis
+
+# Wait for DB
+echo "⏳ Waiting for database..."
+sleep 5
+
+# Run migrations
+flask db upgrade 2>/dev/null || echo "ℹ️  Run 'flask db init && flask db migrate' to set up migrations"
+
+# Seed data
+python -m app.cli init_db
+
+echo ""
+echo "✅ Setup complete!"
+echo "   Start dev server: ./scripts/dev.sh"
+echo "   Run tests: pytest"
+echo "   View logs: open http://localhost:5000/admin/logs"

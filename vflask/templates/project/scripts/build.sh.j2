@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_NAME="{{ project_name }}"
+DIST_DIR="${DIST_DIR:-dist}"
+BUNDLE_PATH="${DIST_DIR}/${PROJECT_NAME}-prod.tar.gz"
+STAGE_DIR="${DIST_DIR}/stage"
+
+mkdir -p "${DIST_DIR}"
+rm -rf "${STAGE_DIR}"
+mkdir -p "${STAGE_DIR}"
+
+find . -mindepth 1 -maxdepth 1 \
+  ! -name '.git' \
+  ! -name '.venv' \
+  ! -name '__pycache__' \
+  ! -name '.pytest_cache' \
+  ! -name "${DIST_DIR}" \
+  -exec cp -R {} "${STAGE_DIR}/" \;
+
+python -m compileall "${STAGE_DIR}/app" >/dev/null 2>&1 || true
+
+tar -czf "${BUNDLE_PATH}" -C "${STAGE_DIR}" .
+
+echo "✅ Production bundle created: ${BUNDLE_PATH}"
+echo "Install: tar -xzf ${BUNDLE_PATH} -C /target/path && cd /target/path && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && gunicorn app:create_app"

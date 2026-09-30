@@ -1,0 +1,2 @@
+[console_scripts]
+vflask = vflask.cli.main:cli

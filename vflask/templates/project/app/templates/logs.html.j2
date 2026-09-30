@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Logs - {{ project_name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="toolbar">
+        <label>Log file:</label>
+        <select onchange="window.location.href='?file='+this.value">
+            {% for f in log_files %}
+            <option value="{{ f }}" {% if f == selected_file %}selected{% endif %}>{{ f }}</option>
+            {% endfor %}
+        </select>
+        <button class="btn" onclick="window.location.reload()">Refresh</button>
+        <span style="color:#64748b;margin-left:auto">{{ log_lines|length }} lines</span>
+    </div>
+</div>
+<div class="card" style="max-height:70vh;overflow-y:auto;padding:0">
+    {% for line in log_lines %}
+    <div class="log-line {% if 'ERROR' in line %}log-error{% elif 'WARNING' in line %}log-warning{% elif 'INFO' in line %}log-info{% elif 'DEBUG' in line %}log-debug{% endif %}">
+        {{ line }}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

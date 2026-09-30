@@ -1,0 +1,18 @@
+"""Test helpers."""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+def http(client, method: str, path: str, body: dict | None = None, headers: dict | None = None) -> dict[str, Any]:
+    """Make HTTP request and return JSON response."""
+    clean_path = path.lstrip("/")
+    res = client.open(
+        f"/api/v1/{clean_path}",
+        method=method,
+        json=body,
+        headers=headers or {},
+    )
+    assert res.status_code < 500, f"Server Error ({res.status_code}): {res.get_data(as_text=True)}"
+    return res.get_json()

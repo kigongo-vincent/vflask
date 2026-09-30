@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+source .venv/bin/activate
+
+export FLASK_APP=app:create_app
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+export PYTHONPATH=.
+
+echo "🚀 Starting {{ project_name }} dev server..."
+echo "   API: http://localhost:5000"
+echo "   Logs: http://localhost:5000/admin/logs"
+echo "   Health: http://localhost:5000/api/v1/health"
+echo ""
+
+# Start watcher in background
+python -c "from app.watcher import start_watcher; from pathlib import Path; start_watcher(Path('.'))" &
+WATCHER_PID=$!
+
+# Trap to kill watcher on exit
+trap "kill $WATCHER_PID 2>/dev/null" EXIT
+
+# Start Flask
+python -m flask run --host=0.0.0.0 --port=${PORT:-5000} --reload

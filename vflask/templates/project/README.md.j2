@@ -1,0 +1,47 @@
+# {{ project_name }}
+
+Built with [vflask](https://github.com/vflask/vflask) - Modern typed Flask scaffolder.
+
+## Installation
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+```
+
+## Project commands
+
+```bash
+./scripts/start.sh
+./scripts/push.sh
+./scripts/help.sh
+```
+
+### Start the app
+
+```bash
+./scripts/start.sh
+```
+
+This creates the venv if needed, installs dependencies, copies `.env.example` if missing, starts Postgres and Redis, and launches the Flask dev server.
+
+### Push changes
+
+```bash
+./scripts/push.sh "feat: add module"
+```
+
+### Help
+
+```bash
+./scripts/help.sh
+```
+
+## Creating modules
+
+```bash
+vflask module create sales -f name:string -f amount:float -f status:string:index -r admin
+```

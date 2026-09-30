@@ -1,0 +1,58 @@
+"""{{ module.plural_class }} routes."""
+
+from __future__ import annotations
+
+from flask import Blueprint
+
+from app.base import auth_required, role_required
+from app.modules.{{ module.table_name }}.handlers import {{ module.class_name }}Handler
+
+bp = Blueprint("{{ module.table_name }}", __name__, url_prefix="{{ module.url_prefix }}")
+handler = {{ module.class_name }}Handler()
+
+
+@bp.post("/list")
+@auth_required
+@role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
+def list_{{ module.table_name }}() -> tuple:
+    """List {{ module.table_name }}."""
+    return handler.list()
+
+
+@bp.post("/")
+@auth_required
+@role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
+def create_{{ module.singular }}() -> tuple:
+    """Create {{ module.singular }}."""
+    return handler.create()
+
+
+@bp.get("/<int:item_id>")
+@auth_required
+def get_{{ module.singular }}(item_id: int) -> tuple:
+    """Get {{ module.singular }} by ID."""
+    return handler.get(item_id)
+
+
+@bp.put("/<int:item_id>")
+@auth_required
+@role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
+def update_{{ module.singular }}(item_id: int) -> tuple:
+    """Update {{ module.singular }}."""
+    return handler.update(item_id)
+
+
+@bp.delete("/<int:item_id>")
+@auth_required
+@role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
+def delete_{{ module.singular }}(item_id: int) -> tuple:
+    """Delete {{ module.singular }}."""
+    return handler.delete(item_id)
+
+
+@bp.post("/bulk-delete")
+@auth_required
+@role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
+def bulk_delete_{{ module.table_name }}() -> tuple:
+    """Bulk delete {{ module.table_name }}."""
+    return handler.bulk_delete()

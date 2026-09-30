@@ -1,0 +1,43 @@
+# {{ module.plural_class }} Module
+
+Auto-generated documentation for the `{{ module.table_name }}` module.
+
+## Model
+
+**{{ module.class_name }}**
+
+| Field | Type | Nullable | Unique | Index |
+|-------|------|----------|--------|-------|
+| id | Integer | No | Yes | Yes |
+{% for field in fields %}
+| {{ field.name }} | {{ field.type }} | {{ "Yes" if field.nullable else "No" }} | {{ "Yes" if field.unique else "No" }} | {{ "Yes" if field.index else "No" }} |
+{% endfor %}
+| created_at | DateTime | No | No | No |
+| updated_at | DateTime | No | No | No |
+| deleted_at | DateTime | Yes | No | No |
+
+## Endpoints
+
+| Method | Path | Auth | Roles | Description |
+|--------|------|------|-------|-------------|
+| POST | `{{ module.url_prefix }}/list` | ✅ | {{ roles|join(', ') }} | List {{ module.table_name }} |
+| POST | `{{ module.url_prefix }}/` | ✅ | {{ roles|join(', ') }} | Create {{ module.singular }} |
+| GET | `{{ module.url_prefix }}/<id>` | ✅ | Any | Get {{ module.singular }} |
+| PUT | `{{ module.url_prefix }}/<id>` | ✅ | {{ roles|join(', ') }} | Update {{ module.singular }} |
+| DELETE | `{{ module.url_prefix }}/<id>` | ✅ | {{ roles|join(', ') }} | Delete {{ module.singular }} |
+| POST | `{{ module.url_prefix }}/bulk-delete` | ✅ | {{ roles|join(', ') }} | Bulk delete |
+
+## Usage Examples
+
+```bash
+# List {{ module.table_name }}
+curl -X POST http://localhost:5000{{ module.url_prefix }}/list \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"pagination": {"page": 1, "limit": 10}, "columns": [], "search": ""}'
+
+# Create {{ module.singular }}
+curl -X POST http://localhost:5000{{ module.url_prefix }}/ \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ {% for field in fields %}"{{ field.name }}": ...{% if not loop.last %}, {% endif %}{% endfor %} }'

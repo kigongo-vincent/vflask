@@ -1,0 +1,100 @@
+"""{{ module.plural_class }} service layer."""
+
+from __future__ import annotations
+
+from app.base.query import apply_filters
+from app.extensions import db
+from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
+
+FILTERABLE: set[str] = {
+{% for field in fields %}
+    "{{ field.name }}",
+{% endfor %}
+{% if not fields %}
+    "name",
+{% endif %}
+}
+
+
+class {{ module.class_name }}Service:
+    """Business logic for {{ module.plural_class }}."""
+
+    def __init__(self) -> None:
+        self.db = db
+
+    def list_{{ module.table_name }}(self, req: dict) -> tuple[list[{{ module.class_name }}], int]:
+        """List {{ module.table_name }} with filtering and pagination."""
+        pagination = req.get("pagination", {})
+        page = pagination.get("page", 1)
+        limit = pagination.get("limit", 10)
+
+        query = self.db.session.query({{ module.class_name }})
+
+        # Exclude soft-deleted by default
+        if not any(f.get("column") == "trashed" for f in req.get("columns", [])):
+            query = query.filter({{ module.class_name }}.deleted_at.is_(None))
+
+        # Apply filters
+        query = apply_filters(query, {{ module.class_name }}, req.get("columns", []), FILTERABLE)
+
+        # Search
+        if req.get("search"):
+            term = f"%{req['search']}%"
+{% if fields %}
+            query = query.filter(
+{% for field in fields if field.type in ('string', 'text') %}
+                {{ module.class_name }}.{{ field.name }}.like(term){% if not loop.last %} |{% endif %}
+{% endfor %}
+            )
+{% else %}
+            query = query.filter({{ module.class_name }}.name.like(term))
+{% endif %}
+
+        total = query.count()
+        rows = (
+            query.order_by({{ module.class_name }}.created_at.desc())
+            .limit(limit)
+            .offset((page - 1) * limit)
+            .all()
+        )
+        return rows, total
+
+    def get_{{ module.singular }}(self, item_id: int) -> {{ module.class_name }} | None:
+        """Get a single {{ module.singular }} by ID."""
+        return self.db.session.get({{ module.class_name }}, item_id)
+
+    def create_{{ module.singular }}(self, data: dict) -> {{ module.class_name }}:
+        """Create a new {{ module.singular }}."""
+        item = {{ module.class_name }}(**data)
+        self.db.session.add(item)
+        self.db.session.commit()
+        return item
+
+    def update_{{ module.singular }}(self, item_id: int, updates: dict) -> {{ module.class_name }} | None:
+        """Update an existing {{ module.singular }}."""
+        item = self.get_{{ module.singular }}(item_id)
+        if not item or item.deleted_at:
+            return None
+        for key, value in updates.items():
+            if hasattr(item, key):
+                setattr(item, key, value)
+        self.db.session.commit()
+        return item
+
+    def delete_{{ module.singular }}(self, item_id: int) -> bool:
+        """Soft delete a {{ module.singular }}."""
+        item = self.get_{{ module.singular }}(item_id)
+        if not item:
+            return False
+        item.soft_delete()
+        self.db.session.commit()
+        return True
+
+    def bulk_delete(self, ids: list[int]) -> int:
+        """Soft delete multiple {{ module.table_name }}."""
+        count = 0
+        for item in self.db.session.query({{ module.class_name }}).filter({{ module.class_name }}.id.in_(ids)):
+            item.soft_delete()
+            count += 1
+        self.db.session.commit()
+        return count

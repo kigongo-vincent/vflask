@@ -1,0 +1,57 @@
+"""CLI commands for {{ project_name }}."""
+
+from __future__ import annotations
+
+import click
+from flask import Flask
+
+from app import create_app
+from app.extensions import db
+from app.shared.models import Role, User
+from app.shared.rbac import RBACService
+
+
+@click.group()
+def main() -> None:
+    """{{ project_name }} CLI."""
+    pass
+
+
+@main.command()
+def init_db() -> None:
+    """Initialize database with default roles and admin user."""
+    app = create_app()
+    with app.app_context():
+        db.create_all()
+        RBACService.seed_roles()
+
+        # Create admin user
+        admin = db.session.query(User).filter_by(email="admin@example.com").first()
+        if not admin:
+            admin = User(email="admin@example.com", name="Admin", is_active=True)
+            admin.set_password("Admin123!")
+            db.session.add(admin)
+            db.session.commit()
+            RBACService.assign_role(admin, "admin")
+            click.echo("✅ Created admin user: admin@example.com / Admin123!")
+        else:
+            click.echo("ℹ️  Admin user already exists")
+
+
+@main.command()
+@click.argument("email")
+@click.argument("password")
+@click.argument("name")
+def create_user(email: str, password: str, name: str) -> None:
+    """Create a new user."""
+    app = create_app()
+    with app.app_context():
+        user = User(email=email, name=name)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        click.echo(f"✅ Created user: {email}")
+
+
+if __name__ == "__main__":
+    main()

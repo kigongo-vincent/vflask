@@ -1,0 +1,73 @@
+"""{{ module.plural_class }} request handlers."""
+
+from __future__ import annotations
+
+from flask import request
+
+from app.base import api_error, api_ok, paginated_response
+from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
+
+
+class {{ module.class_name }}Handler:
+    """Handle HTTP requests for {{ module.plural_class }}."""
+
+    def __init__(self) -> None:
+        self.service = {{ module.class_name }}Service()
+
+    def list(self) -> tuple:
+        """List {{ module.table_name }} with pagination and filters."""
+        req = request.get_json(silent=True) or {}
+        if "pagination" not in req:
+            return api_error("Invalid payload: pagination required")
+        try:
+            items, total = self.service.list_{{ module.table_name }}(req)
+        except ValueError as e:
+            return api_error(str(e))
+        except Exception as e:
+            return api_error(str(e), 500)
+        return paginated_response(
+            [i.to_dict() for i in items],
+            total,
+            req["pagination"]["page"],
+            req["pagination"]["limit"],
+        )
+
+    def create(self) -> tuple:
+        """Create a new {{ module.singular }}."""
+        body = request.get_json(silent=True) or {}
+        if not body:
+            return api_error("Invalid payload")
+        try:
+            item = self.service.create_{{ module.singular }}(body)
+        except Exception as e:
+            return api_error(str(e), 500)
+        return api_ok(item.to_dict(), msg="created", status=201)
+
+    def get(self, item_id: int) -> tuple:
+        """Get a single {{ module.singular }}."""
+        item = self.service.get_{{ module.singular }}(item_id)
+        if not item or item.deleted_at:
+            return api_error("{{ module.class_name }} not found", 404)
+        return api_ok(item.to_dict())
+
+    def update(self, item_id: int) -> tuple:
+        """Update a {{ module.singular }}."""
+        body = request.get_json(silent=True) or {}
+        item = self.service.update_{{ module.singular }}(item_id, body)
+        if not item:
+            return api_error("{{ module.class_name }} not found", 404)
+        return api_ok(item.to_dict(), msg="updated")
+
+    def delete(self, item_id: int) -> tuple:
+        """Soft delete a {{ module.singular }}."""
+        if not self.service.delete_{{ module.singular }}(item_id):
+            return api_error("{{ module.class_name }} not found", 404)
+        return api_ok(msg="deleted")
+
+    def bulk_delete(self) -> tuple:
+        """Soft delete multiple {{ module.table_name }}."""
+        body = request.get_json(silent=True) or {}
+        if "ids" not in body or not isinstance(body["ids"], list):
+            return api_error("Invalid payload: ids array required")
+        count = self.service.bulk_delete(body["ids"])
+        return api_ok({"deleted": count}, msg="bulk deleted successfully")

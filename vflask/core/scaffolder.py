@@ -48,7 +48,7 @@ def parse_field_spec(spec: str) -> dict[str, Any]:
     name, type_name, *flags = spec.split(":")
     name = name.strip()
     type_name = (type_name or "string").strip().lower()
-    field = {
+    field: dict[str, Any] = {
         "name": name,
         "type": type_name,
         "nullable": True,
@@ -102,12 +102,23 @@ class ProjectScaffolder:
             "project/README.md.j2": project_dir / "README.md",
             "project/app/cli.py.j2": project_dir / "app" / "cli.py",
             "project/app/watcher.py.j2": project_dir / "app" / "watcher.py",
+            "project/app/base/openapi.py.j2": project_dir / "app" / "base" / "openapi.py",
+            "project/app/integrations/__init__.py.j2": project_dir / "app" / "integrations" / "__init__.py",
+            "project/app/integrations/payment.py.j2": project_dir / "app" / "integrations" / "payment.py",
+            "project/app/integrations/storage.py.j2": project_dir / "app" / "integrations" / "storage.py",
+            "project/app/integrations/mailer.py.j2": project_dir / "app" / "integrations" / "mailer.py",
+            "project/app/integrations/google_oauth.py.j2": project_dir / "app" / "integrations" / "google_oauth.py",
+            "project/Dockerfile.j2": project_dir / "Dockerfile",
+            "project/dockerignore.j2": project_dir / ".dockerignore",
+            "project/workflows/ci.yml.j2": project_dir / ".github" / "workflows" / "ci.yml",
+            "project/workflows/deploy.yml.j2": project_dir / ".github" / "workflows" / "deploy.yml",
             "project/scripts/start.sh.j2": project_dir / "scripts" / "start.sh",
             "project/scripts/push.sh.j2": project_dir / "scripts" / "push.sh",
             "project/scripts/help.sh.j2": project_dir / "scripts" / "help.sh",
             "project/tests/conftest.py.j2": project_dir / "tests" / "conftest.py",
             "project/tests/helpers.py.j2": project_dir / "tests" / "helpers.py",
             "project/migrations/env.py.j2": project_dir / "migrations" / "env.py",
+            "project/migrations/script.py.mako.j2": project_dir / "migrations" / "script.py.mako",
         }
 
         for template_name, output_path in files_to_render.items():
@@ -118,18 +129,535 @@ class ProjectScaffolder:
                 os.chmod(output_path, 0o755)
 
         generated_files = {
-            "requirements.txt": "click==8.1.7\nFlask==3.1.0\nFlask-SQLAlchemy==3.1.1\nFlask-Migrate==4.0.7\nFlask-JWT-Extended==4.7.1\nFlask-Cors==5.0.0\npsycopg[binary]==3.3.6\npython-dotenv==1.0.1\nwatchdog==4.0.1\nrich==13.0.0\ngunicorn==23.0.0\npytest==8.3.1\n",
+            "requirements.txt": "click==8.1.7\nFlask==3.1.0\nFlask-SQLAlchemy==3.1.1\nFlask-Migrate==4.0.7\nFlask-JWT-Extended==4.7.1\nFlask-Cors==5.0.0\npsycopg[binary]==3.3.6\npython-dotenv==1.0.1\nwatchdog==4.0.1\nrich==13.0.0\ngunicorn==23.0.0\nrequests>=2.32,<3\nboto3>=1.35,<2\ncloudinary>=1.41,<2\npytest==8.3.1\n",
+            "migrations/alembic.ini": """[alembic]
+script_location = .
+prepend_sys_path = .
+sqlalchemy.url = driver://user:pass@localhost/dbname
+
+[loggers]
+keys = root,sqlalchemy,alembic
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+qualname =
+
+[logger_sqlalchemy]
+level = WARN
+handlers =
+qualname = sqlalchemy.engine
+
+[logger_alembic]
+level = INFO
+handlers = console
+qualname = alembic
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(levelname)-5.5s [%(name)s] %(message)s
+datefmt = %H:%M:%S
+""",
+            "migrations/versions/.gitkeep": "",
             "pyrightconfig.json": '{\n  "include": ["app", "tests", "migrations"],\n  "pythonVersion": "3.11",\n  "executionEnvironments": [\n    {\n      "root": ".",\n      "extraPaths": ["."]\n    }\n  ]\n}\n',
-            ".env.example": "FLASK_APP=app:create_app\nFLASK_DEBUG=1\nSECRET_KEY=changeme\nDATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app\nJWT_SECRET_KEY=super-secret\nREDIS_URL=redis://localhost:6379/0\nPORT=5000\n",
+            ".env.example": "FLASK_APP=app:create_app\nFLASK_DEBUG=0\nSECRET_KEY=replace-with-a-random-secret\nDATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app\nJWT_SECRET_KEY=replace-with-a-separate-random-secret\nREDIS_URL=redis://localhost:6379/0\nPORT=5000\nWEB_CONCURRENCY=3\nGUNICORN_THREADS=2\nPAYMENT_PROVIDER=flutterwave\nFLW_SECRET_KEY=\nSTORAGE_PROVIDER=s3\nS3_BUCKET=\nAWS_REGION=us-east-1\nCLOUDINARY_CLOUD_NAME=\nCLOUDINARY_API_KEY=\nCLOUDINARY_API_SECRET=\nMAIL_PROVIDER=smtp\nMAIL_FROM_ADDRESS=\nSMTP_HOST=\nSMTP_PORT=587\nSMTP_USERNAME=\nSMTP_PASSWORD=\nGOOGLE_CLIENT_ID=\nGOOGLE_CLIENT_SECRET=\nGOOGLE_REDIRECT_URI=\n",
             "docker-compose.yml": """services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_DB: app\n      POSTGRES_USER: app\n      POSTGRES_PASSWORD: app\n    ports:\n      - "5432:5432"\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\n  redis:\n    image: redis:7-alpine\n    ports:\n      - "6379:6379"\n\nvolumes:\n  postgres_data:\n""",
-            "app/__init__.py": """from __future__ import annotations\n\nfrom flask import Flask\n\nfrom app.config import AppConfig\nfrom app.extensions import db, jwt, migrate\n\n\ndef create_app(config_object: type | None = None) -> Flask:\n    app = Flask(__name__)\n    app.config.from_object(config_object or AppConfig)\n\n    db.init_app(app)\n    jwt.init_app(app)\n    migrate.init_app(app, db)\n\n    from app.modules import register_modules\n\n    register_modules(app)\n\n    @app.get("/api/v1/health")\n    def healthcheck() -> tuple[dict, int]:\n        return {\"status\": \"ok\"}, 200\n\n    return app\n""",
-            "app/config.py": """from __future__ import annotations\n\nimport os\n\n\nclass AppConfig:\n    SECRET_KEY = os.getenv("SECRET_KEY", "development-secret")\n    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "postgresql+psycopg://app:app@localhost:5432/app")\n    SQLALCHEMY_TRACK_MODIFICATIONS = False\n    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret")\n    JSON_SORT_KEYS = False\n\n\nclass TestingConfig(AppConfig):\n    TESTING = True\n    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"\n""",
+            "app/__init__.py": """from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+from flask import Flask, Response
+
+from app.base.openapi import build_openapi_spec
+from app.auth.routes import register_auth_routes
+from app.config import AppConfig
+from app.extensions import db, jwt, migrate
+
+
+def create_app(config_object: type | None = None) -> Flask:
+    app = Flask(__name__)
+    app.config.from_object(config_object or AppConfig)
+
+    if not app.testing and os.getenv("APP_ENV", "production").lower() != "development":
+        for key in ("SECRET_KEY", "JWT_SECRET_KEY"):
+            secret = str(app.config.get(key) or "")
+            if len(secret) < 32 or secret in {"development-secret", "jwt-secret", "replace-with-a-random-secret", "replace-with-a-separate-random-secret"}:
+                raise RuntimeError(f"Set a unique production {key} with at least 32 characters")
+        database_url = str(app.config.get("SQLALCHEMY_DATABASE_URI", ""))
+        if "@localhost" in database_url or "@127.0.0.1" in database_url:
+            raise RuntimeError("Set DATABASE_URL to a reachable production database")
+
+    db.init_app(app)
+    jwt.init_app(app)
+    migrate.init_app(app, db)
+
+    from app.modules import register_modules
+
+    register_modules(app)
+    register_auth_routes(app)
+
+    @app.get("/api/v1/health")
+    def healthcheck() -> tuple[dict[str, Any], int]:
+        return {"status": "ok"}, 200
+
+    @app.get("/api/v1/openapi.json")
+    def openapi_document() -> tuple[dict[str, Any], int]:
+        return build_openapi_spec(app), 200
+
+    @app.get("/api/v1/docs")
+    def api_docs() -> Response:
+        return Response("<!doctype html><html><head><title>API documentation</title><link rel='stylesheet' href='https://unpkg.com/swagger-ui-dist@5/swagger-ui.css'></head><body><div id='swagger-ui'></div><script src='https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js'></script><script>SwaggerUIBundle({url:'/api/v1/openapi.json',dom_id:'#swagger-ui'});</script></body></html>", mimetype="text/html")
+
+    @app.get("/api/v1/docs/modules.json")
+    def module_docs_index() -> tuple[dict[str, Any], int]:
+        modules_dir = Path(__file__).resolve().parent / "modules"
+        entries: list[dict[str, str | bool]] = []
+        docs_by_module: dict[str, str] = {}
+
+        for module_dir in sorted(modules_dir.iterdir(), key=lambda item: item.name):
+            if not module_dir.is_dir():
+                continue
+            docs_path = module_dir / "docs.md"
+            if not docs_path.exists():
+                continue
+            module_name = module_dir.name
+            docs_by_module[module_name] = docs_path.read_text(encoding="utf-8")
+            entries.append(
+                {
+                    "name": module_name,
+                    "path": f"/api/v1/{module_name}",
+                    "docs": f"/api/v1/docs/{module_name}",
+                    "available": True,
+                }
+            )
+
+        return {
+            "title": "API Documentation",
+            "base_url": "/api/v1",
+            "modules": entries,
+            "docs": docs_by_module,
+        }, 200
+
+    @app.get("/api/v1/docs/<module_name>")
+    def module_docs(module_name: str) -> tuple[Response, int] | tuple[dict[str, str], int]:
+        docs_path = Path(__file__).resolve().parent / "modules" / module_name / "docs.md"
+        if not docs_path.is_file():
+            return {"error": "Module documentation not found"}, 404
+        return Response(docs_path.read_text(encoding="utf-8"), mimetype="text/markdown"), 200
+
+    return app
+""",
+            "app/config.py": """from __future__ import annotations\n\nimport os\n\n\nclass AppConfig:\n    SECRET_KEY = os.getenv("SECRET_KEY", "development-secret")\n    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "postgresql+psycopg://app:app@localhost:5432/app")\n    SQLALCHEMY_TRACK_MODIFICATIONS = False\n    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}\n    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret")\n    JSON_SORT_KEYS = False\n    MAX_CONTENT_LENGTH = 16 * 1024 * 1024\n    SESSION_COOKIE_HTTPONLY = True\n    SESSION_COOKIE_SAMESITE = "Lax"\n    SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"\n\n\nclass TestingConfig(AppConfig):\n    TESTING = True\n    SESSION_COOKIE_SECURE = False\n    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"\n""",
             "app/extensions.py": """from __future__ import annotations\n\nfrom flask_jwt_extended import JWTManager\nfrom flask_migrate import Migrate\nfrom flask_sqlalchemy import SQLAlchemy\n\ndb = SQLAlchemy()\nmigrate = Migrate()\njwt = JWTManager()\n""",
-            "app/base/__init__.py": """from __future__ import annotations\n\nfrom functools import wraps\nfrom typing import Any\n\nfrom flask import jsonify\nfrom flask_jwt_extended import get_jwt_identity, jwt_required\n\nfrom app.base.query import apply_filters\n\n\ndef api_ok(data: Any | None = None, msg: str = "success", status: int = 200):\n    return jsonify({\"status\": status, \"msg\": msg, \"data\": data}), status\n\n\ndef api_error(msg: str, status: int = 400):\n    return jsonify({\"status\": status, \"msg\": msg, \"data\": None}), status\n\n\ndef paginated_response(data: list[Any], total: int, page: int, limit: int):\n    return api_ok({\"items\": data, \"total\": total, \"page\": page, \"limit\": limit})\n\n\ndef auth_required(view):\n    @wraps(view)\n    @jwt_required()\n    def wrapper(*args, **kwargs):\n        return view(*args, **kwargs)\n\n    return wrapper\n\n\ndef role_required(*roles: str):\n    def decorator(view):\n        @wraps(view)\n        @jwt_required()\n        def wrapper(*args, **kwargs):\n            identity = get_jwt_identity()\n            if not identity:\n                return api_error("Authentication required", 401)\n            if roles and identity not in roles:\n                return api_error("Forbidden", 403)\n            return view(*args, **kwargs)\n\n        return wrapper\n\n    return decorator\n\n\ndef get_user_id() -> int:\n    return int(get_jwt_identity())\n\n\n__all__ = ["api_ok", "api_error", "paginated_response", "auth_required", "role_required", "get_user_id", "apply_filters"]\n""",
+            "app/base/__init__.py": """from __future__ import annotations
+
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar
+
+from flask import Response, jsonify
+from flask_jwt_extended import get_jwt_identity, jwt_required
+
+from app.base.query import apply_filters
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def api_ok(data: Any | None = None, msg: str = "success", status: int = 200) -> tuple[Response, int]:
+    return jsonify({\"status\": status, \"msg\": msg, \"data\": data}), status
+
+
+def api_error(msg: str, status: int = 400) -> tuple[Response, int]:
+    return jsonify({\"status\": status, \"msg\": msg, \"data\": None}), status
+
+
+def paginated_response(data: list[dict[str, Any]], total: int, page: int, limit: int) -> tuple[Response, int]:
+    return api_ok({\"items\": data, \"total\": total, \"page\": page, \"limit\": limit})
+
+
+def auth_required(view: F) -> F:
+    @wraps(view)
+    @jwt_required()
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return view(*args, **kwargs)
+
+    return wrapper  # type: ignore[return-value]
+
+
+def role_required(*roles: str) -> Callable[[F], F]:
+    def decorator(view: F) -> F:
+        @wraps(view)
+        @jwt_required()
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            identity = get_jwt_identity()
+            if not identity:
+                return api_error("Authentication required", 401)
+            if roles and identity not in roles:
+                return api_error("Forbidden", 403)
+            return view(*args, **kwargs)
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
+
+
+def get_user_id() -> int:
+    return int(get_jwt_identity())
+
+
+__all__ = ["api_ok", "api_error", "paginated_response", "auth_required", "role_required", "get_user_id", "apply_filters"]
+""",
             "app/base/query.py": """from __future__ import annotations\n\nfrom typing import Any\n\n\ndef apply_filters(query: Any, model: Any, columns: list[dict[str, Any]] | None, filterable: set[str] | None = None) -> Any:\n    \"\"\"Apply simple query filters for list endpoints.\"\"\"\n    for column in columns or []:\n        field_name = str(column.get("column") or column.get("name") or "").strip()\n        if not field_name or (filterable is not None and field_name not in filterable):\n            continue\n\n        operator = str(column.get("operator") or "eq").lower()\n        value = column.get("value")\n        if value is None:\n            continue\n\n        attr = getattr(model, field_name, None)\n        if attr is None:\n            continue\n\n        if operator in {\"eq\", \"equals\", \"is\"}:\n            query = query.filter(attr == value)\n        elif operator in {\"ne\", \"noteq\", \"not\"}:\n            query = query.filter(attr != value)\n        elif operator in {\"gt\", \"greaterthan\"}:\n            query = query.filter(attr > value)\n        elif operator in {\"lt\", \"lessthan\"}:\n            query = query.filter(attr < value)\n        elif operator in {\"like\", \"contains\", \"icontains\"}:\n            query = query.filter(attr.like(f"%{value}%"))\n        elif operator in {\"in\", \"contains_any\"}:\n            query = query.filter(attr.in_(value if isinstance(value, (list, tuple, set)) else [value]))\n\n    return query\n""",
+            "app/auth/__init__.py": """from app.auth.routes import register_auth_routes
+
+__all__ = ["register_auth_routes"]
+""",
+            "app/auth/routes.py": """from __future__ import annotations
+
+import os
+import random
+import secrets
+from typing import Any
+
+from flask import Blueprint, Flask, current_app, request, url_for
+from flask_jwt_extended import create_access_token, create_refresh_token, get_jwt_identity, jwt_required
+from itsdangerous import BadSignature, URLSafeTimedSerializer
+from requests import RequestException
+
+from app.base import api_error, api_ok
+from app.extensions import db
+from app.integrations.google_oauth import GoogleOAuthClient
+from app.shared.models import User
+
+bp = Blueprint("auth", __name__, url_prefix="/api/v1/auth")
+AUTH_LOGIN_URL = "/api/v1/auth/login"
+
+
+def register_auth_routes(app: Flask) -> None:
+    app.register_blueprint(bp)
+
+
+def _google_state_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="google-oauth-state")
+
+
+def _google_redirect_uri() -> str:
+    return os.getenv("GOOGLE_REDIRECT_URI") or url_for("auth.google_oauth_callback", _external=True)
+
+
+@bp.get("/google/authorization-url")
+def google_authorization_url() -> tuple[dict[str, Any], int]:
+    try:
+        client = GoogleOAuthClient.from_environment()
+        state = _google_state_serializer().dumps({"nonce": secrets.token_urlsafe(32)})
+        redirect_uri = _google_redirect_uri()
+        return api_ok(
+            {
+                "authorization_url": client.authorization_url(redirect_uri=redirect_uri, state=state),
+                "state": state,
+                "redirect_uri": redirect_uri,
+            }
+        )
+    except RuntimeError as error:
+        return api_error(str(error), 503)
+
+
+@bp.route("/google/callback", methods=["GET", "POST"])
+def google_oauth_callback() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or request.args.to_dict()
+    code = str(payload.get("code", "")).strip()
+    state = str(payload.get("state", "")).strip()
+    if not code or not state:
+        return api_error("code and state are required", 400)
+    try:
+        _google_state_serializer().loads(state, max_age=600)
+    except BadSignature:
+        return api_error("Invalid or expired OAuth state", 400)
+
+    try:
+        profile = GoogleOAuthClient.from_environment().process_callback(
+            code=code,
+            redirect_uri=_google_redirect_uri(),
+        )
+    except RuntimeError as error:
+        return api_error(str(error), 503)
+    except RequestException:
+        return api_error("Google OAuth request failed", 502)
+
+    email = str(profile.get("email", "")).strip().lower()
+    if not email or profile.get("email_verified") is not True:
+        return api_error("Google account must have a verified email address", 401)
+
+    user = db.session.query(User).filter_by(email=email).first()
+    if not user:
+        user = User(email=email, name=str(profile.get("name") or email), is_active=True)
+        user.set_password(secrets.token_urlsafe(32))
+        db.session.add(user)
+        db.session.commit()
+    if not user.is_active:
+        return api_error("User account is inactive", 403)
+
+    return api_ok(
+        {
+            "token": create_access_token(identity=str(user.id)),
+            "refresh_token": create_refresh_token(identity=str(user.id)),
+            "user": _serialize_user(user),
+        },
+        msg="Google sign-in successful",
+    )
+
+
+def _serialize_user(user: User) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "isActive": user.is_active,
+        "roles": [role.name for role in user.roles],
+    }
+
+
+@bp.post("/signup")
+def signup() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    password = str(payload.get("password", "")).strip()
+    name = str(payload.get("name", "")).strip()
+
+    if not email or not password or not name:
+        return api_error("email, password, and name are required", 400)
+
+    if db.session.query(User).filter_by(email=email).first():
+        return api_error("User already exists", 409)
+
+    user = User(email=email, name=name, is_active=True)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    access = create_access_token(identity=str(user.id))
+    refresh = create_refresh_token(identity=str(user.id))
+    return api_ok(
+        {"token": access, "refresh_token": refresh, "user": _serialize_user(user)},
+        msg="signup successful",
+        status=201,
+    )
+
+
+@bp.post("/login")
+def login() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    password = str(payload.get("password", "")).strip()
+
+    if not email or not password:
+        return api_error("email and password are required", 400)
+
+    user = db.session.query(User).filter_by(email=email).first()
+    if not user or not user.check_password(password):
+        return api_error("Invalid email or password", 401)
+
+    access = create_access_token(identity=str(user.id))
+    refresh = create_refresh_token(identity=str(user.id))
+    return api_ok({"token": access, "refresh_token": refresh, "user": _serialize_user(user)})
+
+
+@bp.get("/verify-token")
+@jwt_required()
+def verify_token() -> tuple[dict[str, Any], int]:
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return api_error("Invalid token", 401)
+    return api_ok({"valid": True, "user": _serialize_user(user)})
+
+
+@bp.post("/refresh")
+@jwt_required(refresh=True)
+def refresh_token() -> tuple[dict[str, Any], int]:
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return api_error("User not found", 404)
+    access = create_access_token(identity=str(user.id))
+    refresh = create_refresh_token(identity=str(user.id))
+    return api_ok({"token": access, "refresh_token": refresh, "user": _serialize_user(user)})
+
+
+@bp.post("/request-otp")
+def request_otp() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    if not email:
+        return api_error("email is required", 400)
+
+    user = db.session.query(User).filter_by(email=email).first()
+    if not user:
+        return api_error("User not found", 404)
+
+    otp = str(random.randint(100000, 999999))
+    return api_ok({"otp": otp, "message": "OTP generated for password reset"})
+
+
+@bp.post("/forgot-password")
+def forgot_password() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    if not email:
+        return api_error("email is required", 400)
+
+    user = db.session.query(User).filter_by(email=email).first()
+    if not user:
+        return api_error("User not found", 404)
+
+    otp = str(random.randint(100000, 999999))
+    return api_ok({"otp": otp, "message": "Password reset OTP sent"})
+
+
+@bp.post("/reset-password")
+def reset_password() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    email = str(payload.get("email", "")).strip().lower()
+    otp = str(payload.get("otp", "")).strip()
+    password = str(payload.get("password", "")).strip()
+
+    if not email or not otp or not password:
+        return api_error("email, otp, and password are required", 400)
+
+    user = db.session.query(User).filter_by(email=email).first()
+    if not user:
+        return api_error("User not found", 404)
+
+    if len(otp) != 6 or not otp.isdigit():
+        return api_error("Invalid OTP", 400)
+
+    user.set_password(password)
+    db.session.commit()
+    return api_ok({"message": "Password reset successful"})
+
+
+@bp.get("/me")
+@jwt_required()
+def me() -> tuple[dict[str, Any], int]:
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return api_error("User not found", 404)
+    return api_ok({"user": _serialize_user(user)})
+
+
+@bp.put("/profile")
+@jwt_required()
+def update_profile() -> tuple[dict[str, Any], int]:
+    payload: dict[str, Any] = request.get_json(silent=True) or {}
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return api_error("User not found", 404)
+
+    if "name" in payload and str(payload.get("name", "")).strip():
+        user.name = str(payload["name"]).strip()
+    if "email" in payload and str(payload.get("email", "")).strip():
+        user.email = str(payload["email"]).strip().lower()
+    if "password" in payload and str(payload.get("password", "")).strip():
+        user.set_password(str(payload["password"]).strip())
+
+    db.session.commit()
+    return api_ok({"user": _serialize_user(user)}, msg="profile updated")
+
+
+@bp.post("/logout")
+@jwt_required()
+def logout() -> tuple[dict[str, Any], int]:
+    return api_ok({"message": "logged out"})
+""",
             "app/shared/__init__.py": """from app.shared.models import Role, User\n""",
-            "app/shared/mixins.py": """from __future__ import annotations\n\nfrom datetime import datetime\n\nfrom app.extensions import db\n\n\nclass TimestampMixin:\n    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)\n    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)\n\n\nclass SoftDeleteMixin:\n    deleted_at = db.Column(db.DateTime, nullable=True, default=None)\n\n    def soft_delete(self) -> None:\n        self.deleted_at = datetime.utcnow()\n\n    def restore(self) -> None:\n        self.deleted_at = None\n""",
-            "app/shared/models.py": """from __future__ import annotations\n\nfrom datetime import datetime\n\nfrom werkzeug.security import check_password_hash, generate_password_hash\n\nfrom app.extensions import db\nfrom app.shared.mixins import SoftDeleteMixin, TimestampMixin\n\n\nclass Role(db.Model):\n    __tablename__ = "roles"\n\n    id = db.Column(db.Integer, primary_key=True)\n    name = db.Column(db.String(80), unique=True, nullable=False, index=True)\n    description = db.Column(db.String(255), nullable=True)\n\n\nuser_roles = db.Table(\n    "user_roles",\n    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),\n    db.Column("role_id", db.Integer, db.ForeignKey("roles.id"), primary_key=True),\n)\n\n\nclass User(SoftDeleteMixin, TimestampMixin, db.Model):\n    __tablename__ = "users"\n\n    id = db.Column(db.Integer, primary_key=True)\n    email = db.Column(db.String(255), unique=True, nullable=False, index=True)\n    password_hash = db.Column(db.String(255), nullable=False)\n    name = db.Column(db.String(120), nullable=False)\n    is_active = db.Column(db.Boolean, default=True, nullable=False)\n    roles = db.relationship("Role", secondary=user_roles, backref=db.backref("users", lazy="dynamic"))\n\n    def set_password(self, password: str) -> None:\n        self.password_hash = generate_password_hash(password)\n\n    def check_password(self, password: str) -> bool:\n        return check_password_hash(self.password_hash, password)\n\n    def to_dict(self) -> dict:\n        return {\n            "id": self.id,\n            "email": self.email,\n            "name": self.name,\n            "isActive": self.is_active,\n            "roles": [role.name for role in self.roles],\n        }\n""",
+            "app/shared/mixins.py": """from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from app.extensions import db
+
+
+class TimestampMixin:
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class SoftDeleteMixin:
+    deleted_at = db.Column(db.DateTime, nullable=True, default=None)
+
+    def soft_delete(self) -> None:
+        self.deleted_at = datetime.now(timezone.utc)
+
+    def restore(self) -> None:
+        self.deleted_at = None
+""",
+            "app/shared/models.py": """from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.orm import Mapped
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app.extensions import db
+from app.shared.mixins import SoftDeleteMixin, TimestampMixin
+
+
+class Role(db.Model):
+    __tablename__ = "roles"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    description = db.Column(db.String(255), nullable=True)
+    users: Mapped[list["User"]] = db.relationship("User", secondary="user_roles", back_populates="roles")
+
+
+user_roles = db.Table(
+    "user_roles",
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"), primary_key=True),
+    db.Column("role_id", db.Integer, db.ForeignKey("roles.id"), primary_key=True),
+)
+
+
+class User(SoftDeleteMixin, TimestampMixin, db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    roles: Mapped[list[Role]] = db.relationship("Role", secondary=user_roles, back_populates="users")
+
+    def set_password(self, password: str) -> None:
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "email": self.email,
+            "name": self.name,
+            "isActive": self.is_active,
+            "roles": [role.name for role in self.roles],
+        }
+""",
             "app/shared/rbac.py": """from __future__ import annotations\n\nfrom app.extensions import db\nfrom app.shared.models import Role, User\n\n\nclass RBACService:\n    @staticmethod\n    def seed_roles() -> None:\n        defaults = [\n            ("admin", "Full access"),\n            ("editor", "Can edit records"),\n            ("viewer", "Read-only access"),\n        ]\n        for name, description in defaults:\n            if not db.session.query(Role).filter_by(name=name).first():\n                db.session.add(Role(name=name, description=description))\n        db.session.commit()\n\n    @staticmethod\n    def assign_role(user: User, role_name: str) -> None:\n        role = db.session.query(Role).filter_by(name=role_name).first()\n        if role and role not in user.roles:\n            user.roles.append(role)\n            db.session.commit()\n\n    @staticmethod\n    def user_has_role(user: User, *required_roles: str) -> bool:\n        if not required_roles:\n            return True\n        if not user:\n            return False\n        names = {role.name for role in user.roles}\n        return bool(set(required_roles) & names)\n""",
             "app/modules/__init__.py": """from __future__ import annotations\n\nfrom importlib import import_module\nfrom pathlib import Path\n\nfrom flask import Flask\n\n\ndef register_modules(app: Flask) -> None:\n    modules_dir = Path(__file__).resolve().parent\n    for child in sorted(modules_dir.iterdir()):\n        if child.is_dir() and (child / "routes.py").exists():\n            module = import_module(f"app.modules.{child.name}.routes")\n            if hasattr(module, "register_routes"):\n                module.register_routes(app)\n""",
             "app/modules/.gitkeep": "",
@@ -170,7 +698,21 @@ class ModuleScaffolder:
             lstrip_blocks=True,
         )
 
-        context = {
+        test_values = {
+            "string": '"example"',
+            "text": '"example"',
+            "integer": "1",
+            "int": "1",
+            "float": "1.5",
+            "decimal": "1.5",
+            "boolean": "True",
+            "bool": "True",
+            "date": "datetime.now(timezone.utc).date()",
+            "datetime": "datetime.now(timezone.utc)",
+            "json": '{"key": "value"}',
+            "uuid": '"00000000-0000-0000-0000-000000000000"',
+        }
+        context: dict[str, Any] = {
             "module": {
                 "name": module_key,
                 "plural_class": class_name if class_name.endswith("s") else class_name,
@@ -183,6 +725,7 @@ class ModuleScaffolder:
                 {
                     **field,
                     "sqlalchemy_type": FieldSpec(**field).sqlalchemy_type,
+                    "test_value": test_values.get(field["type"].lower(), '"example"'),
                 }
                 for field in (fields or [])
             ],

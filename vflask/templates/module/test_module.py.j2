@@ -1,4 +1,4 @@
-import pytest
+from datetime import datetime, timezone
 
 from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
 
@@ -11,5 +11,30 @@ def test_{{ module.singular }}_model_field_names() -> None:
     {% endfor %}
 
 
-def test_{{ module.singular }}_service_bootstrap() -> None:
-    assert {{ module.class_name }} is not None
+def test_{{ module.singular }}_serialization_returns_declared_fields() -> None:
+    now = datetime.now(timezone.utc)
+    item = {{ module.class_name }}(
+        id=1,
+{% for field in fields %}
+        {{ field.name }}={{ field.test_value }},
+{% endfor %}
+{% if not fields %}
+        name="example",
+{% endif %}
+        created_at=now,
+        updated_at=now,
+    )
+
+    data = item.to_dict()
+    assert data["id"] == 1
+{% for field in fields %}
+    assert "{{ field.name }}" in data
+{% endfor %}
+    assert "createdAt" in data
+    assert "updatedAt" in data
+
+
+def test_{{ module.singular }}_service_can_be_constructed() -> None:
+    from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
+
+    assert isinstance({{ module.class_name }}Service(), {{ module.class_name }}Service)

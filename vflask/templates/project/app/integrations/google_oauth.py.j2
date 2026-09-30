@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+import os
+from urllib.parse import urlencode
+from typing import Any, cast
+
+import requests
+
+
+class GoogleOAuthClient:
+    authorization_endpoint = "https://accounts.google.com/o/oauth2/v2/auth"
+    token_endpoint = "https://oauth2.googleapis.com/token"
+    userinfo_endpoint = "https://openidconnect.googleapis.com/v1/userinfo"
+
+    def __init__(self, client_id: str, client_secret: str) -> None:
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+    @classmethod
+    def from_environment(cls) -> GoogleOAuthClient:
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        if not client_id or not client_secret:
+            raise RuntimeError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required")
+        return cls(client_id, client_secret)
+
+    def authorization_url(self, *, redirect_uri: str, state: str) -> str:
+        query = urlencode(
+            {
+                "client_id": self.client_id,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "scope": "openid email profile",
+                "state": state,
+                "include_granted_scopes": "true",
+            }
+        )
+        return f"{self.authorization_endpoint}?{query}"
+
+    def exchange_code(self, *, code: str, redirect_uri: str) -> dict[str, Any]:
+        response = requests.post(
+            self.token_endpoint,
+            data={
+                "code": code,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            },
+            timeout=20,
+        )
+        response.raise_for_status()
+        return cast(dict[str, Any], response.json())
+
+    def userinfo(self, access_token: str) -> dict[str, Any]:
+        response = requests.get(
+            self.userinfo_endpoint,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=20,
+        )
+        response.raise_for_status()
+        return cast(dict[str, Any], response.json())
+
+    def process_callback(self, *, code: str, redirect_uri: str) -> dict[str, Any]:
+        token_data = self.exchange_code(code=code, redirect_uri=redirect_uri)
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise RuntimeError("Google did not return an access token")
+        return self.userinfo(str(access_token))

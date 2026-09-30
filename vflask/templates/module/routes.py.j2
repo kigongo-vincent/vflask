@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import Blueprint
+from flask import Blueprint, Flask
 
 from app.base import auth_required, role_required
 from app.modules.{{ module.table_name }}.handlers import {{ module.class_name }}Handler
@@ -56,3 +56,7 @@ def delete_{{ module.singular }}(item_id: int) -> tuple:
 def bulk_delete_{{ module.table_name }}() -> tuple:
     """Bulk delete {{ module.table_name }}."""
     return handler.bulk_delete()
+
+
+def register_routes(app: Flask) -> None:
+    app.register_blueprint(bp)

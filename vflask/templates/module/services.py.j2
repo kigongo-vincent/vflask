@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.base.query import apply_filters
 from app.extensions import db
 from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
@@ -22,11 +24,19 @@ class {{ module.class_name }}Service:
     def __init__(self) -> None:
         self.db = db
 
-    def list_{{ module.table_name }}(self, req: dict) -> tuple[list[{{ module.class_name }}], int]:
+    def list_{{ module.table_name }}(self, req: dict[str, Any]) -> tuple[list[{{ module.class_name }}], int]:
         """List {{ module.table_name }} with filtering and pagination."""
-        pagination = req.get("pagination", {})
-        page = pagination.get("page", 1)
-        limit = pagination.get("limit", 10)
+        pagination: dict[str, Any] = req.get("pagination", {})
+        page = pagination.get("page")
+        limit = pagination.get("limit")
+
+        if page is None or limit is None:
+            raise ValueError("pagination with page and limit required")
+
+        page = int(page)
+        limit = int(limit)
+        if page <= 0 or limit <= 0 or limit > 100:
+            raise ValueError("pagination with page and limit required; limit > 100 is not allowed")
 
         query = self.db.session.query({{ module.class_name }})
 
@@ -63,14 +73,14 @@ class {{ module.class_name }}Service:
         """Get a single {{ module.singular }} by ID."""
         return self.db.session.get({{ module.class_name }}, item_id)
 
-    def create_{{ module.singular }}(self, data: dict) -> {{ module.class_name }}:
+    def create_{{ module.singular }}(self, data: dict[str, Any]) -> {{ module.class_name }}:
         """Create a new {{ module.singular }}."""
         item = {{ module.class_name }}(**data)
         self.db.session.add(item)
         self.db.session.commit()
         return item
 
-    def update_{{ module.singular }}(self, item_id: int, updates: dict) -> {{ module.class_name }} | None:
+    def update_{{ module.singular }}(self, item_id: int, updates: dict[str, Any]) -> {{ module.class_name }} | None:
         """Update an existing {{ module.singular }}."""
         item = self.get_{{ module.singular }}(item_id)
         if not item or item.deleted_at:

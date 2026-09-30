@@ -1,0 +1,70 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+      - run: python -m compileall -q app tests migrations
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ '{{' }} secrets.DOCKER_USERNAME {{ '}}' }}
+          password: ${{ '{{' }} secrets.DOCKER_PAT {{ '}}' }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ '{{' }} secrets.DOCKER_USERNAME {{ '}}' }}/${{ '{{' }} secrets.PROJECT_NAME {{ '}}' }}:latest
+            ${{ '{{' }} secrets.DOCKER_USERNAME {{ '}}' }}/${{ '{{' }} secrets.PROJECT_NAME {{ '}}' }}:${{ '{{' }} github.sha {{ '}}' }}
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy container to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKER_USERNAME: ${{ '{{' }} secrets.DOCKER_USERNAME {{ '}}' }}
+          DOCKER_PAT: ${{ '{{' }} secrets.DOCKER_PAT {{ '}}' }}
+          PROJECT_NAME: ${{ '{{' }} secrets.PROJECT_NAME {{ '}}' }}
+          ENV_FILE: ${{ '{{' }} secrets.ENV_FILE {{ '}}' }}
+        with:
+          host: ${{ '{{' }} secrets.EC2_HOST {{ '}}' }}
+          username: ${{ '{{' }} secrets.EC2_USER {{ '}}' }}
+          key: ${{ '{{' }} secrets.EC2_SSH_KEY {{ '}}' }}
+          envs: DOCKER_USERNAME,DOCKER_PAT,PROJECT_NAME,ENV_FILE
+          script: |
+            set -eu
+            image="$DOCKER_USERNAME/$PROJECT_NAME:latest"
+            deploy_dir="$HOME/$PROJECT_NAME"
+            mkdir -p "$deploy_dir"
+            chmod 700 "$deploy_dir"
+            printf '%s' "$ENV_FILE" > "$deploy_dir/.env"
+            chmod 600 "$deploy_dir/.env"
+            printf '%s' "$DOCKER_PAT" | docker login --username "$DOCKER_USERNAME" --password-stdin
+            docker pull "$image"
+            docker run --rm --env-file "$deploy_dir/.env" "$image" sh -c 'if find migrations/versions -maxdepth 1 -name "*.py" -print -quit | grep -q .; then flask --app app:create_app db upgrade; fi'
+            docker rm --force "$PROJECT_NAME" 2>/dev/null || true
+            docker run --detach --restart unless-stopped \
+              --name "$PROJECT_NAME" \
+              --env-file "$deploy_dir/.env" \
+              --publish 5000:5000 \
+              "$image"
+            docker image prune --force

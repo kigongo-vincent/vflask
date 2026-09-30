@@ -1,0 +1,328 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import Any
+
+from flask import Flask
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, Numeric, String, Text, inspect
+
+from app.extensions import db
+
+
+def _column_schema(column: Any) -> dict[str, Any]:
+    column_type = column.type
+    if isinstance(column_type, Boolean):
+        schema: dict[str, Any] = {"type": "boolean"}
+    elif isinstance(column_type, Integer):
+        schema = {"type": "integer"}
+    elif isinstance(column_type, (Float, Numeric)):
+        schema = {"type": "number"}
+    elif isinstance(column_type, DateTime):
+        schema = {"type": "string", "format": "date-time"}
+    elif isinstance(column_type, Date):
+        schema = {"type": "string", "format": "date"}
+    elif isinstance(column_type, Text):
+        schema = {"type": "string"}
+    elif isinstance(column_type, String):
+        schema = {"type": "string"}
+        if column_type.length:
+            schema["maxLength"] = column_type.length
+    else:
+        schema = {"type": "string"}
+
+    if column.nullable:
+        schema["nullable"] = True
+    return schema
+
+
+def _model_schemas() -> tuple[dict[str, dict[str, Any]], dict[str, type[Any]]]:
+    schemas: dict[str, dict[str, Any]] = {}
+    models: dict[str, type[Any]] = {}
+    aliases = {"created_at": "createdAt", "updated_at": "updatedAt", "is_active": "isActive"}
+
+    for mapper in db.Model.registry.mappers:
+        model = mapper.class_
+        table_name = getattr(model, "__tablename__", None)
+        if not table_name:
+            continue
+
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for column in inspect(model).columns:
+            if column.key in {"deleted_at", "password_hash"}:
+                continue
+            if model.__name__ == "User" and column.key in {"created_at", "updated_at"}:
+                continue
+            name = aliases.get(column.key, column.key)
+            properties[name] = _column_schema(column)
+            if not column.nullable:
+                required.append(name)
+
+        if model.__name__ == "User" and "roles" in inspect(model).relationships:
+            properties["roles"] = {"type": "array", "items": {"type": "string"}}
+            required.append("roles")
+
+        schemas[model.__name__] = {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }
+        models[table_name] = model
+
+    return schemas, models
+
+
+def _reference(name: str) -> dict[str, str]:
+    return {"$ref": f"#/components/schemas/{name}"}
+
+
+def _envelope(data_schema: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "status": {"type": "integer"},
+            "msg": {"type": "string"},
+            "data": data_schema,
+        },
+        "required": ["status", "msg", "data"],
+    }
+
+
+def _request_body(schema: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "required": True,
+        "content": {"application/json": {"schema": schema}},
+    }
+
+
+def _auth_request_schema(name: str) -> dict[str, Any] | None:
+    fields: dict[str, dict[str, Any]] = {
+        "email": {"type": "string", "format": "email"},
+        "password": {"type": "string", "format": "password"},
+        "name": {"type": "string"},
+        "otp": {"type": "string", "minLength": 6, "maxLength": 6},
+        "code": {"type": "string"},
+        "state": {"type": "string"},
+    }
+    contracts = {
+        "signup": ("email", "password", "name"),
+        "login": ("email", "password"),
+        "request_otp": ("email",),
+        "forgot_password": ("email",),
+        "reset_password": ("email", "otp", "password"),
+        "update_profile": (),
+        "google_oauth_callback": ("code", "state"),
+    }
+    required = contracts.get(name)
+    if required is None:
+        return None
+    if name == "update_profile":
+        properties = {key: fields[key] for key in ("email", "password", "name")}
+    else:
+        properties = {key: fields[key] for key in required}
+    schema: dict[str, Any] = {"type": "object", "properties": properties}
+    if required:
+        schema["required"] = list(required)
+    return schema
+
+
+def _api_error_schema() -> dict[str, Any]:
+    return _envelope({"type": "null"})
+
+
+def _path_parameter(name: str) -> dict[str, Any]:
+    return {
+        "name": name,
+        "in": "path",
+        "required": True,
+        "schema": {"type": "integer" if name.endswith("_id") else "string"},
+    }
+
+
+def build_openapi_spec(app: Flask) -> dict[str, Any]:
+    model_schemas, models = _model_schemas()
+    components: dict[str, Any] = {
+        "schemas": {
+            **model_schemas,
+            "ErrorResponse": _api_error_schema(),
+        },
+        "securitySchemes": {
+            "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}
+        },
+    }
+    paths: dict[str, Any] = {}
+    tags: dict[str, dict[str, Any]] = {}
+    protected_auth = {"verify_token", "refresh_token", "me", "update_profile", "logout"}
+
+    for rule in app.url_map.iter_rules():
+        if not rule.rule.startswith("/api/v1/") or rule.endpoint in {"openapi_document", "api_docs"}:
+            continue
+
+        endpoint = rule.endpoint
+        blueprint = endpoint.partition(".")[0] if "." in endpoint else "system"
+        auth_endpoint = endpoint.rsplit(".", 1)[-1] if blueprint == "auth" else ""
+        module_model = models.get(blueprint)
+        tag_name = blueprint if blueprint != "system" else "system"
+        tag: dict[str, str] = {"name": tag_name}
+        if module_model:
+            docs_path = Path(__file__).resolve().parent.parent / "modules" / blueprint / "docs.md"
+            if docs_path.is_file():
+                tag["description"] = docs_path.read_text(encoding="utf-8")
+                tag["externalDocs"] = {"description": "Module documentation", "url": f"/api/v1/docs/{blueprint}"}
+        tags[tag_name] = tag
+
+        openapi_path = re.sub(r"<(?:(?:int|float|string|path):)?([A-Za-z_][A-Za-z0-9_]*)>", r"{\1}", rule.rule)
+        path_item = paths.setdefault(openapi_path, {})
+        for method in sorted(rule.methods - {"HEAD", "OPTIONS"}):
+            lower_method = method.lower()
+            view = app.view_functions.get(endpoint)
+            doc = (getattr(view, "__doc__", None) or "").strip().splitlines()
+            summary = doc[0].strip(" .") if doc else endpoint.rsplit(".", 1)[-1].replace("_", " ").capitalize()
+            operation: dict[str, Any] = {
+                "operationId": re.sub(r"[^A-Za-z0-9_]", "_", endpoint + "_" + lower_method),
+                "summary": summary,
+                "tags": [tag_name],
+                "responses": {},
+            }
+
+            path_parameters = re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", openapi_path)
+            if path_parameters:
+                operation["parameters"] = [_path_parameter(name) for name in path_parameters]
+            if blueprint == "auth" and auth_endpoint == "google_oauth_callback" and lower_method == "get":
+                operation["parameters"] = operation.get("parameters", []) + [
+                    {"name": name, "in": "query", "required": True, "schema": {"type": "string"}}
+                    for name in ("code", "state")
+                ]
+
+            requires_auth = blueprint != "system" and (blueprint != "auth" or auth_endpoint in protected_auth)
+            if requires_auth:
+                operation["security"] = [{"BearerAuth": []}]
+                operation["responses"]["401"] = {
+                    "description": "Authentication required or token invalid",
+                    "content": {"application/json": {"schema": _reference("ErrorResponse")}},
+                }
+
+            if blueprint == "auth":
+                request_schema = _auth_request_schema(auth_endpoint)
+                if request_schema and lower_method in {"post", "put", "patch"}:
+                    operation["requestBody"] = _request_body(request_schema)
+                if auth_endpoint in {"signup", "login", "refresh_token"}:
+                    data_schema = {
+                        "type": "object",
+                        "properties": {
+                            "token": {"type": "string"},
+                            "refresh_token": {"type": "string"},
+                            "user": _reference("User"),
+                        },
+                    }
+                elif auth_endpoint in {"verify_token"}:
+                    data_schema = {
+                        "type": "object",
+                        "properties": {"valid": {"type": "boolean"}, "user": _reference("User")},
+                    }
+                elif auth_endpoint in {"me", "update_profile"}:
+                    data_schema = {"type": "object", "properties": {"user": _reference("User")}}
+                elif auth_endpoint == "google_authorization_url":
+                    data_schema = {
+                        "type": "object",
+                        "properties": {
+                            "authorization_url": {"type": "string", "format": "uri"},
+                            "state": {"type": "string"},
+                            "redirect_uri": {"type": "string", "format": "uri"},
+                        },
+                    }
+                elif auth_endpoint == "google_oauth_callback":
+                    data_schema = {
+                        "type": "object",
+                        "properties": {
+                            "token": {"type": "string"},
+                            "refresh_token": {"type": "string"},
+                            "user": _reference("User"),
+                        },
+                    }
+                elif auth_endpoint in {"request_otp", "forgot_password"}:
+                    data_schema = {
+                        "type": "object",
+                        "properties": {"otp": {"type": "string"}, "message": {"type": "string"}},
+                    }
+                else:
+                    data_schema = {"type": "object", "properties": {"message": {"type": "string"}}}
+            elif module_model:
+                model_name = module_model.__name__
+                if lower_method in {"post", "put", "patch"}:
+                    if openapi_path.endswith("/list"):
+                        operation["requestBody"] = _request_body(
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "pagination": {
+                                        "type": "object",
+                                        "properties": {
+                                            "page": {"type": "integer", "minimum": 1},
+                                            "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                                        },
+                                        "required": ["page", "limit"],
+                                    },
+                                    "columns": {"type": "array", "items": {"type": "object"}},
+                                    "search": {"type": "string"},
+                                },
+                                "required": ["pagination"],
+                            }
+                        )
+                    elif "bulk-delete" in openapi_path:
+                        operation["requestBody"] = _request_body(
+                            {"type": "object", "properties": {"ids": {"type": "array", "items": {"type": "integer"}}}, "required": ["ids"]}
+                        )
+                    else:
+                        input_properties: dict[str, Any] = {}
+                        input_required: list[str] = []
+                        for column in inspect(module_model).columns:
+                            if column.key in {"id", "created_at", "updated_at", "deleted_at"}:
+                                continue
+                            input_properties[column.key] = _column_schema(column)
+                            if not column.nullable and column.default is None:
+                                input_required.append(column.key)
+                        input_schema: dict[str, Any] = {"type": "object", "properties": input_properties}
+                        if lower_method == "post" and input_required:
+                            input_schema["required"] = input_required
+                        operation["requestBody"] = _request_body(input_schema)
+
+                if openapi_path.endswith("/list"):
+                    data_schema = {
+                        "type": "object",
+                        "properties": {
+                            "items": {"type": "array", "items": _reference(model_name)},
+                            "total": {"type": "integer"},
+                            "page": {"type": "integer"},
+                            "limit": {"type": "integer"},
+                        },
+                    }
+                elif lower_method == "delete":
+                    data_schema = {"type": "object", "additionalProperties": True}
+                else:
+                    data_schema = _reference(model_name)
+            elif endpoint == "healthcheck":
+                data_schema = {"type": "object", "properties": {"status": {"type": "string"}}}
+            else:
+                data_schema = {"type": "object", "additionalProperties": True}
+
+            success_status = "201" if lower_method == "post" and (auth_endpoint == "signup" or (blueprint != "auth" and not openapi_path.endswith(("/list", "bulk-delete")))) else "200"
+            operation["responses"][success_status] = {
+                "description": "Successful response",
+                "content": {"application/json": {"schema": _envelope(data_schema)}},
+            }
+            operation["responses"]["400"] = {
+                "description": "Invalid request",
+                "content": {"application/json": {"schema": _reference("ErrorResponse")}},
+            }
+            path_item[lower_method] = operation
+
+    return {
+        "openapi": "3.0.3",
+        "info": {"title": app.name.replace("_", " ").title() + " API", "version": "1.0.0"},
+        "servers": [{"url": "/"}],
+        "tags": list(tags.values()),
+        "paths": paths,
+        "components": components,
+    }

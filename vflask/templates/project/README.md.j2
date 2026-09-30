@@ -28,6 +28,23 @@ cp .env.example .env
 
 This creates the venv if needed, installs dependencies, copies `.env.example` if missing, starts Postgres and Redis, and launches the Flask dev server.
 
+## Integrations
+
+Provider contracts live under `app/integrations` and can be replaced with a dotted custom class path:
+
+- Payments: `PAYMENT_PROVIDER=flutterwave` by default; set `PAYMENT_PROVIDER_CLASS=your_package.YourProvider` to replace it.
+- Object storage: `STORAGE_PROVIDER=s3` by default; `cloudinary` is also supported. Custom adapters use `STORAGE_PROVIDER_CLASS`.
+- Email: `MAIL_PROVIDER=smtp` by default; `ses` uses Amazon SES. Custom adapters use `MAIL_PROVIDER_CLASS`.
+- Google OAuth: configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the exact public callback URL in `GOOGLE_REDIRECT_URI`. Request `/api/v1/auth/google/authorization-url`, then return Google's `code` and signed `state` to `/api/v1/auth/google/callback`.
+
+Keep production credentials in a secret manager or deployment environment, never in source control. Replace `SECRET_KEY` and `JWT_SECRET_KEY` with independent random values before deployment.
+
+## Docker deployment
+
+Build and run locally with `docker build -t {{ project_name }} .`. The GitHub workflows run tests and build the image, then publish it to Docker Hub and deploy it to EC2. Configure repository secrets `DOCKER_PAT`, `DOCKER_USERNAME`, `EC2_HOST`, `EC2_SSH_KEY`, `EC2_USER`, `ENV_FILE`, and `PROJECT_NAME`. `ENV_FILE` must contain the production environment file contents; set its `DATABASE_URL` to a managed production database, since the EC2 workflow deploys only the application container.
+
+Install Docker Engine on the EC2 host, grant `EC2_USER` permission to run Docker, and allow inbound traffic on port 5000 (or place a TLS-terminating reverse proxy in front of it). After creating modules or changing models, generate and commit migrations locally with `APP_ENV=development flask --app app:create_app db migrate -m "describe schema change"`; deployment runs `flask --app app:create_app db upgrade` before replacing the running container.
+
 ### Push changes
 
 ```bash

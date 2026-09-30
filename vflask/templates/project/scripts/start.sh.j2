@@ -26,6 +26,7 @@ docker compose up -d db redis >/dev/null 2>&1 || true
 export FLASK_APP=app:create_app
 export FLASK_ENV=development
 export FLASK_DEBUG=1
+export APP_ENV=development
 export PYTHONPATH=.
 
 echo "🚀 Starting {{ project_name }} dev server..."

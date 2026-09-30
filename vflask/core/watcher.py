@@ -20,7 +20,8 @@ class ModuleHandler(FileSystemEventHandler):
     def on_modified(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             return
-        path = Path(event.src_path)
+        
+        path = Path(event.src_path) # type: ignore
         if path.name != "handlers.py" or "__pycache__" in path.parts:
             return
 

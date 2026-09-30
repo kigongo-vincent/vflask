@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import os
+from importlib import import_module
+from typing import Any, BinaryIO, Protocol, cast
+
+class StorageProvider(Protocol):
+    def upload(self, file: BinaryIO, *, key: str, content_type: str | None = None) -> str: ...
+
+    def delete(self, key: str) -> None: ...
+
+
+class S3StorageProvider:
+    def upload(self, file: BinaryIO, *, key: str, content_type: str | None = None) -> str:
+        import boto3
+
+        bucket = os.getenv("S3_BUCKET")
+        if not bucket:
+            raise RuntimeError("S3_BUCKET is required for S3 storage")
+        extra_args: dict[str, Any] = {}
+        if content_type:
+            extra_args["ContentType"] = content_type
+        boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1")).upload_fileobj(
+            file,
+            bucket,
+            key,
+            ExtraArgs=extra_args,
+        )
+        return f"s3://{bucket}/{key}"
+
+    def delete(self, key: str) -> None:
+        import boto3
+
+        bucket = os.getenv("S3_BUCKET")
+        if not bucket:
+            raise RuntimeError("S3_BUCKET is required for S3 storage")
+        boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1")).delete_object(
+            Bucket=bucket,
+            Key=key,
+        )
+
+
+class CloudinaryStorageProvider:
+    def _configure(self) -> None:
+        import cloudinary
+
+        required = ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")
+        if any(not os.getenv(name) for name in required):
+            raise RuntimeError("Cloudinary credentials are required for Cloudinary storage")
+        cloudinary.config(
+            cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
+            api_key=os.environ["CLOUDINARY_API_KEY"],
+            api_secret=os.environ["CLOUDINARY_API_SECRET"],
+            secure=True,
+        )
+
+    def upload(self, file: BinaryIO, *, key: str, content_type: str | None = None) -> str:
+        import cloudinary.uploader
+
+        self._configure()
+        result = cloudinary.uploader.upload(file, public_id=key, resource_type="auto")
+        return str(result["secure_url"])
+
+    def delete(self, key: str) -> None:
+        import cloudinary.uploader
+
+        self._configure()
+        cloudinary.uploader.destroy(key, resource_type="auto")
+
+
+def _load_custom_provider() -> StorageProvider | None:
+    class_path = os.getenv("STORAGE_PROVIDER_CLASS")
+    if not class_path:
+        return None
+    module_name, separator, class_name = class_path.rpartition(".")
+    if not separator:
+        raise ValueError("STORAGE_PROVIDER_CLASS must be a dotted Python class path")
+    provider_class = getattr(import_module(module_name), class_name)
+    return cast(StorageProvider, provider_class())
+
+
+def get_storage_provider() -> StorageProvider:
+    custom_provider = _load_custom_provider()
+    if custom_provider:
+        return custom_provider
+    name = os.getenv("STORAGE_PROVIDER", "s3").lower()
+    if name == "s3":
+        return S3StorageProvider()
+    if name == "cloudinary":
+        return CloudinaryStorageProvider()
+    raise ValueError(f"Unsupported STORAGE_PROVIDER: {name}")

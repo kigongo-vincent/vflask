@@ -137,6 +137,10 @@ Release behavior:
 ./scripts/help.sh
 ```
 
+## Visual docs
+
+For the full styled landing page with SVG accents and Pexels imagery, open [docs/index.html](docs/index.html) in a browser.
+
 ## Environment variables
 
 Use these values in production or local setup when enabling provider integrations:

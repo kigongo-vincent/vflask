@@ -13,9 +13,11 @@ import time
 import click
 from pyfiglet import Figlet
 
+from vflask import __version__
 from vflask.core.scaffolder import ModuleScaffolder, ProjectScaffolder, parse_field_spec
 
 
+@click.version_option(version=__version__, prog_name="vflask")
 @click.group()
 def cli() -> None:
     """Create typed Flask projects and modules."""

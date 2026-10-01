@@ -20,6 +20,13 @@ def test_package_version_matches_pyproject() -> None:
     assert vflask.__version__ == data["project"]["version"]
 
 
+def test_cli_version_option() -> None:
+    result = CliRunner().invoke(cli, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.output == f"vflask, version {vflask.__version__}\n"
+
+
 def test_generated_app_cli_uses_project_commands_instead_of_manual_scripts(tmp_path: Path) -> None:
     project_dir = tmp_path / "demo_app"
     ProjectScaffolder.render_project("demo_app", project_dir)

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: vflask
-Version: 1.0.0
+Version: 1.1.0
 Summary: Modern typed Flask project scaffolder with blueprints, RBAC, and local module generation.
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
@@ -130,6 +130,8 @@ This generates files for a business module, such as:
 - handlers
 - tests
 - migration stub
+
+Choose the generated operations with `--mode`: `c` generates create, `cr` adds read/list, `crd` adds soft and bulk delete, and `crud` includes update as well. The default is `crud`.
 
 ### 3) Add the database model
 

@@ -1,279 +1,69 @@
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ project_name }} | vflask app</title>
-    <style>
-      :root {
-        --airbnb-red: #ff385c;
-        --airbnb-red-dark: #d81d43;
-        --airbnb-ink: #222222;
-        --airbnb-muted: #717171;
-        --airbnb-line: #ebebeb;
-        --airbnb-soft: #fff4f5;
-        --airbnb-bg: #f7f7f7;
-        --card: #ffffff;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        font-family: Inter, "Segoe UI", sans-serif;
-        background: linear-gradient(180deg, #fff, var(--airbnb-bg));
-        color: var(--airbnb-ink);
-      }
-      .wrap {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 30px 20px 80px;
-      }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--airbnb-line);
-        border-radius: 26px;
-        box-shadow: 0 18px 40px rgba(34, 34, 34, 0.04);
-      }
-      .hero {
-        display: grid;
-        grid-template-columns: 1.3fr 0.7fr;
-        gap: 24px;
-        padding: 28px;
-        margin-bottom: 28px;
-        background: linear-gradient(140deg, white 0%, #fff5f6 100%);
-        border-color: rgba(255, 56, 92, 0.08);
-      }
-      .eyebrow {
-        display: inline-flex;
-        border-radius: 999px;
-        background: rgba(255, 56, 92, 0.08);
-        color: var(--airbnb-red-dark);
-        border: 1px solid rgba(255, 56, 92, 0.08);
-        padding: 8px 12px;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-weight: 700;
-      }
-      h1 {
-        margin: 18px 0 12px;
-        font-size: clamp(2.3rem, 5vw, 4rem);
-        letter-spacing: -0.06em;
-      }
-      p { line-height: 1.75; color: var(--airbnb-muted); }
-      .cta-row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-top: 20px;
-      }
-      .button {
-        display: inline-flex;
-        justify-content: center;
-        padding: 12px 18px;
-        border-radius: 12px;
-        font-weight: 700;
-        border: 1px solid transparent;
-      }
-      .button.primary {
-        background: var(--airbnb-red);
-        color: white;
-      }
-      .button.secondary {
-        background: white;
-        border-color: var(--airbnb-line);
-        color: var(--airbnb-ink);
-      }
-      .stats {
-        display: grid;
-        gap: 16px;
-        padding: 20px;
-        border-radius: 24px;
-        background: rgba(255,255,255,0.8);
-        border: 1px solid rgba(34,34,34,0.06);
-      }
-      .metric {
-        display: flex;
-        justify-content: space-between;
-        padding: 14px 0;
-        border-bottom: 1px solid var(--airbnb-line);
-      }
-      .metric:last-child { border-bottom: 0; }
-      .label { color: var(--airbnb-muted); }
-      .value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.04em; }
-      section { margin-top: 28px; }
-      h2 {
-        margin: 0 0 14px;
-        font-size: clamp(1.8rem, 3vw, 2.6rem);
-        letter-spacing: -0.05em;
-      }
-      .panel {
-        padding: 20px;
-      }
-      pre {
-        margin: 0;
-        overflow-x: auto;
-        background: #0f172a;
-        color: #e8eefb;
-        padding: 18px 20px;
-        border-radius: 16px;
-        line-height: 1.7;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        overflow: hidden;
-      }
-      th, td {
-        padding: 16px 18px;
-        text-align: left;
-        vertical-align: top;
-        border-bottom: 1px solid var(--airbnb-line);
-      }
-      th {
-        background: #fafafa;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-size: 12px;
-        color: var(--airbnb-muted);
-      }
-      td { color: var(--airbnb-ink); }
-      .badge-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      .badge {
-        display: inline-flex;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: #f8f8f8;
-        border: 1px solid var(--airbnb-line);
-        font-size: 12px;
-        font-weight: 700;
-      }
-      .footer {
-        margin-top: 36px;
-        padding-top: 20px;
-        border-top: 1px solid var(--airbnb-line);
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        color: var(--airbnb-muted);
-      }
-      @media (max-width: 760px) {
-        .hero { grid-template-columns: 1fr; }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header class="card hero">
-        <div>
-          <span class="eyebrow">Python 3.11+ · Flask 3</span>
-          <h1>{{ project_name }}</h1>
-          <p>
-            Built with vflask, a production-minded app scaffolder for Flask. This project includes a typed
-            module structure, auth flow, migrations, API docs, tests, and deployment-ready conventions.
-          </p>
-          <div class="cta-row">
-            <a class="button primary" href="#quickstart">Get started</a>
-            <a class="button secondary" href="#operations">See ops</a>
-          </div>
-        </div>
-        <div class="stats">
-          <div class="metric">
-            <div class="label">Default version</div>
-            <div class="value">1.0.0</div>
-          </div>
-          <div class="metric">
-            <div class="label">Runtime</div>
-            <div class="value">Flask</div>
-          </div>
-          <div class="metric">
-            <div class="label">Included</div>
-            <div class="value">DB + Auth + API</div>
-          </div>
-        </div>
-      </header>
+# {{ project_name }}
 
-      <section>
-        <h2>Setup</h2>
-        <div class="panel">
-          <pre><code>python3 -m venv .venv
+Built with vflask for structured, maintainable Flask application development.
+
+## Setup
+
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-cp .env.example .env</code></pre>
-        </div>
-      </section>
+cp .env.example .env
+```
 
-      <section id="quickstart">
-        <h2>Run the app</h2>
-        <div class="panel">
-          <pre><code>vflask run
-# or, if you already manage Postgres and Redis externally:
-vflask run --project-root . --no-services</code></pre>
-        </div>
-      </section>
+## Run the app
 
-      <section>
-        <h2>Module workflow</h2>
-        <div class="panel">
-          <pre><code>vflask module create products \
+```bash
+vflask run
+```
+
+Or run with your own external services:
+
+```bash
+vflask run --project-root . --no-services
+```
+
+## Create a module
+
+```bash
+vflask module create products \
   -f name:string:required \
   -f price:decimal:required \
   -f sku:string:unique \
-  -r admin -r editor</code></pre>
-        </div>
-      </section>
+  -r admin -r editor
+```
 
-      <section>
-        <h2>API docs</h2>
-        <div class="panel">
-          <pre><code>Swagger UI: http://127.0.0.1:5000/api/v1/docs
-OpenAPI:    http://127.0.0.1:5000/api/v1/openapi.json
-Health:     http://127.0.0.1:5000/health</code></pre>
-        </div>
-      </section>
+## Project commands
 
-      <section>
-        <h2>Project commands</h2>
-        <div class="panel">
-          <table>
-            <thead>
-              <tr>
-                <th>Command</th>
-                <th>Purpose</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td><code>vflask run</code></td><td>Prepare services, apply migrations, and start the app locally.</td></tr>
-              <tr><td><code>vflask watch --project-root .</code></td><td>Regenerate module docs when project files change.</td></tr>
-              <tr><td><code>pytest -q</code></td><td>Run the test suite.</td></tr>
-              <tr><td><code>./scripts/push.sh "feat: add module"</code></td><td>Commit and push the project to your remote repository.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+| Command | Purpose |
+| --- | --- |
+| `vflask run` | Prepare services and start the app |
+| `vflask watch --project-root .` | Regenerate docs when modules change |
+| `pytest -q` | Run the test suite |
+| `./scripts/push.sh "feat: add module"` | Commit and push changes |
 
-      <section id="operations">
-        <h2>Operational checklist</h2>
-        <div class="panel">
-          <div class="badge-list">
-            <span class="badge">Use Alembic for schema migrations</span>
-            <span class="badge">Keep secrets in env vars</span>
-            <span class="badge">Use managed Postgres</span>
-            <span class="badge">Run tests before deploy</span>
-            <span class="badge">Use CI/CD for release builds</span>
-            <span class="badge">Version tags follow semver</span>
-          </div>
-        </div>
-      </section>
+## API docs
 
-      <footer class="footer">
-        <span>{{ project_name }}</span>
-        <span>Production-minded Flask scaffolding</span>
-      </footer>
-    </div>
-  </body>
-</html>
+- Swagger UI: `http://127.0.0.1:5000/api/v1/docs`
+- OpenAPI JSON: `http://127.0.0.1:5000/api/v1/openapi.json`
+
+## Environment variables
+
+Configure the following values before you deploy or run OAuth-backed features:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `EC2_SSH_KEY`
+
+## Production checklist
+
+- Use Alembic for schema migrations
+- Store secrets in environment variables or a secret manager
+- Run tests before deployment
+- Use managed Postgres in production
+- Keep OAuth redirect URIs exact
+- Version releases using semver
+
+This project is intended as a clean starting point for building real products with Flask, PostgreSQL, and a modern modular structure.

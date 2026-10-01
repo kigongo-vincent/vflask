@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import os
 import re
+import venv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -771,6 +772,10 @@ class User(SoftDeleteMixin, TimestampMixin, db.Model):
                 file_path.touch(exist_ok=True)
                 continue
             file_path.write_text(content, encoding="utf-8")
+
+        venv_python = project_dir / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if not venv_python.is_file():
+            venv.create(project_dir / ".venv", with_pip=True)
 
         return project_dir
 

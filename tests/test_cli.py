@@ -79,6 +79,8 @@ def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
     gitignore = (project_dir / ".gitignore").read_text()
     assert ".env" in gitignore
     assert ".venv/" in gitignore
+    venv_python = project_dir / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    assert venv_python.is_file()
     assert "__pycache__/" in gitignore
     assert (project_dir / ".github" / "workflows" / "ci.yml").exists()
     assert (project_dir / ".github" / "workflows" / "deploy.yml").exists()
@@ -112,7 +114,7 @@ def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
     assert "entrypoint.sh" not in dockerfile
     assert "`vflask start`" in project_readme
     start_script = (project_dir / "scripts" / "start.sh").read_text()
-    assert "python -m app.cli run" in start_script
+    assert 'exec vflask start --project-root "$project_root"' in start_script
     init_command = (project_dir / "app" / "cli.py").read_text()
     assert "db.create_all()" in init_command
     assert "RBACService.seed_roles()" in init_command
@@ -387,16 +389,24 @@ def test_vflask_run_starts_services_bootstraps_database_and_runs_app(tmp_path: P
 
     def fake_run(command: list[str], **kwargs) -> SimpleNamespace:
         calls.append(command)
+        if "migrate" in command:
+            versions_dir = project_dir / "migrations" / "versions"
+            (versions_dir / "automatic_schema_update.py").write_text("revision = 'auto'\n")
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr("vflask.cli.main.subprocess.run", fake_run)
     result = CliRunner().invoke(cli, ["run", "--project-root", str(project_dir)])
 
     assert result.exit_code == 0, result.output
-    assert calls[0][:5] == ["docker", "compose", "up", "-d", "--wait"]
-    assert calls[1][0:3] == ["docker", "compose", "exec"]
-    assert calls[2][1:4] == ["-m", "app.cli", "init-db"]
-    assert calls[3][1:5] == ["-m", "flask", "--app", "app:create_app"]
+    assert calls[0][1:4] == ["-m", "pip", "install"]
+    assert calls[1][:5] == ["docker", "compose", "up", "-d", "--wait"]
+    assert calls[2][0:3] == ["docker", "compose", "exec"]
+    assert calls[3][1:8] == ["-m", "flask", "--app", "app:create_app", "db", "migrate", "-m"]
+    assert calls[4][1:7] == ["-m", "flask", "--app", "app:create_app", "db", "upgrade"]
+    assert calls[5][1:4] == ["-m", "app.cli", "init-db"]
+    assert calls[6][1:5] == ["-m", "flask", "--app", "app:create_app"]
+    venv_python = project_dir / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    assert all(command[0] == str(venv_python) for command in calls[3:])
 
 
 def test_vflask_start_migrates_and_execs_production_gunicorn(tmp_path: Path, monkeypatch) -> None:
@@ -432,14 +442,16 @@ def test_vflask_start_migrates_and_execs_production_gunicorn(tmp_path: Path, mon
     )
 
     assert result.exit_code == 0, result.output
-    assert len(commands) == 2
-    assert commands[0][0][1:7] == ["-m", "flask", "--app", "app:create_app", "db", "upgrade"]
-    assert commands[1][0][1:4] == ["-m", "app.cli", "init-db"]
+    assert len(commands) == 3
+    assert commands[0][0][1:4] == ["-m", "pip", "install"]
+    assert commands[1][0][1:7] == ["-m", "flask", "--app", "app:create_app", "db", "upgrade"]
+    assert commands[2][0][1:4] == ["-m", "app.cli", "init-db"]
     assert all(command_root == project_dir.resolve() for _, command_root, _ in commands)
     assert all(environment["APP_ENV"] == "production" for _, _, environment in commands)
     assert len(exec_calls) == 1
     executable, arguments, environment = exec_calls[0]
-    assert executable == sys.executable
+    venv_python = project_dir / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    assert executable == str(venv_python)
     assert arguments[1:4] == ["-m", "gunicorn", "--workers"]
     assert "0.0.0.0:8088" in arguments
     assert arguments[-1] == "app:create_app()"
@@ -466,8 +478,9 @@ def test_vflask_start_skips_migration_when_no_revisions_exist(tmp_path: Path, mo
     )
 
     assert result.exit_code == 0, result.output
-    assert len(commands) == 1
-    assert commands[0][1:4] == ["-m", "app.cli", "init-db"]
+    assert len(commands) == 2
+    assert commands[0][1:4] == ["-m", "pip", "install"]
+    assert commands[1][1:4] == ["-m", "app.cli", "init-db"]
 
 
 def test_vflask_run_moves_to_next_available_port() -> None:
@@ -503,8 +516,9 @@ def test_vflask_forwards_pytest_arguments(tmp_path: Path, monkeypatch) -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert calls[0][0][-2:] == ["-q", "tests/test_cli.py"]
-    assert calls[0][1]["cwd"] == project_dir.resolve()
+    assert calls[0][0][1:4] == ["-m", "pip", "install"]
+    assert calls[1][0][-2:] == ["-q", "tests/test_cli.py"]
+    assert calls[1][1]["cwd"] == project_dir.resolve()
 
 
 def test_vflask_forwards_database_and_generated_app_commands(tmp_path: Path, monkeypatch) -> None:
@@ -529,5 +543,6 @@ def test_vflask_forwards_database_and_generated_app_commands(tmp_path: Path, mon
 
     assert migration_result.exit_code == 0, migration_result.output
     assert app_result.exit_code == 0, app_result.output
-    assert calls[0][-4:] == ["db", "migrate", "-m", "add products"]
-    assert calls[1][-2:] == ["app.cli", "init-db"]
+    assert calls[0][1:4] == ["-m", "pip", "install"]
+    assert calls[1][-4:] == ["db", "migrate", "-m", "add products"]
+    assert calls[2][-2:] == ["app.cli", "init-db"]

@@ -9,13 +9,16 @@ WORKDIR /srv/app
 
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN python -m venv .venv && \
+    .venv/bin/python -m pip install --no-cache-dir --upgrade pip && \
+    .venv/bin/python -m pip install --no-cache-dir -r requirements.txt && \
+    .venv/bin/python -c "import hashlib; from pathlib import Path; Path('.venv/.vflask-requirements.sha256').write_text(hashlib.sha256(Path('requirements.txt').read_bytes()).hexdigest())"
 
 COPY app ./app
 COPY migrations ./migrations
 RUN chown -R app:app /srv/app
 
+ENV PATH="/srv/app/.venv/bin:$PATH"
 USER app
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

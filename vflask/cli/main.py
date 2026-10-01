@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
+import hashlib
 from pathlib import Path
 import shutil
 import socket
 import subprocess
 import sys
 import time
+import venv
 
 import click
 from pyfiglet import Figlet
@@ -72,7 +74,8 @@ def init_database(project_root: str) -> None:
     """Create tables and seed default roles."""
     root = Path(project_root).expanduser().resolve()
     environment = _project_environment(root)
-    _run_project_command([sys.executable, "-m", "app.cli", "init-db"], root, environment)
+    python = _ensure_project_python(root, environment)
+    _run_project_command([python, "-m", "app.cli", "init-db"], root, environment)
 
 
 @database_group.command("migrate")
@@ -112,7 +115,8 @@ def test_project(project_root: str, pytest_args: tuple[str, ...]) -> None:
     """Run project tests; pass additional pytest options after --."""
     root = Path(project_root).expanduser().resolve()
     environment = _project_environment(root)
-    _run_project_command([sys.executable, "-m", "pytest", *pytest_args], root, environment)
+    python = _ensure_project_python(root, environment)
+    _run_project_command([python, "-m", "pytest", *pytest_args], root, environment)
 
 
 @cli.command("app", context_settings={"ignore_unknown_options": True})
@@ -144,7 +148,8 @@ def create_project_user(email: str, name: str, password: str, project_root: str)
 def _run_generated_app_command(project_root: str, arguments: list[str]) -> None:
     root = Path(project_root).expanduser().resolve()
     environment = _project_environment(root)
-    _run_project_command([sys.executable, "-m", "app.cli", *arguments], root, environment)
+    python = _ensure_project_python(root, environment)
+    _run_project_command([python, "-m", "app.cli", *arguments], root, environment)
 
 
 @cli.command("exec", context_settings={"ignore_unknown_options": True})
@@ -156,6 +161,7 @@ def execute_project_command(project_root: str, command: tuple[str, ...]) -> None
         raise click.UsageError("Provide a command after --, for example: vflask exec -- python -m pytest -q")
     root = Path(project_root).expanduser().resolve()
     environment = _project_environment(root)
+    _ensure_project_python(root, environment)
     _run_project_command(list(command), root, environment)
 
 
@@ -177,6 +183,7 @@ def run_project(project_root: str, host: str, port: int, with_services: bool) ->
 
     environment = _project_environment(root)
     environment["FLASK_DEBUG"] = "1"
+    python = _ensure_project_python(root, environment)
 
     if with_services:
         if not (root / "docker-compose.yml").is_file():
@@ -185,15 +192,32 @@ def run_project(project_root: str, host: str, port: int, with_services: bool) ->
         _wait_for_postgres(root, environment)
 
     revisions_dir = root / "migrations" / "versions"
-    if any(path.suffix == ".py" and path.name != "__init__.py" for path in revisions_dir.glob("*.py")):
-        _run_project_command([sys.executable, "-m", "flask", "--app", "app:create_app", "db", "upgrade"], root, environment)
-    _run_project_command([sys.executable, "-m", "app.cli", "init-db"], root, environment)
+    revision_files = {
+        path.name
+        for path in revisions_dir.glob("*.py")
+        if path.name != "__init__.py"
+    }
+    if revision_files:
+        _run_project_command([python, "-m", "flask", "--app", "app:create_app", "db", "upgrade"], root, environment)
+    _run_project_command(
+        [python, "-m", "flask", "--app", "app:create_app", "db", "migrate", "-m", "automatic schema update"],
+        root,
+        environment,
+    )
+    updated_revision_files = {
+        path.name
+        for path in revisions_dir.glob("*.py")
+        if path.name != "__init__.py"
+    }
+    if updated_revision_files != revision_files:
+        _run_project_command([python, "-m", "flask", "--app", "app:create_app", "db", "upgrade"], root, environment)
+    _run_project_command([python, "-m", "app.cli", "init-db"], root, environment)
     port = _next_available_port(host, port)
     environment["APP_BASE_URL"] = f"http://{host}:{port}"
     _print_startup_banner()
     click.echo(f"Starting Flask at http://{host}:{port}")
     _run_project_command(
-        [sys.executable, "-m", "flask", "--app", "app:create_app", "run", "--debug", "--host", host, "--port", str(port)],
+        [python, "-m", "flask", "--app", "app:create_app", "run", "--debug", "--host", host, "--port", str(port)],
         root,
         environment,
     )
@@ -219,6 +243,7 @@ def start_project(project_root: str, host: str, port: int, workers: int, threads
     environment["GUNICORN_THREADS"] = str(threads)
     environment["GUNICORN_TIMEOUT"] = str(timeout)
     environment.setdefault("APP_BASE_URL", f"http://{host}:{port}")
+    python = _ensure_project_python(root, environment)
 
     revisions_dir = root / "migrations" / "versions"
     if revisions_dir.is_dir() and any(
@@ -226,18 +251,18 @@ def start_project(project_root: str, host: str, port: int, workers: int, threads
         for path in revisions_dir.iterdir()
     ):
         _run_project_command(
-            [sys.executable, "-m", "flask", "--app", "app:create_app", "db", "upgrade"],
+            [python, "-m", "flask", "--app", "app:create_app", "db", "upgrade"],
             root,
             environment,
         )
     _run_project_command(
-        [sys.executable, "-m", "app.cli", "init-db"],
+        [python, "-m", "app.cli", "init-db"],
         root,
         environment,
     )
 
     command = [
-        sys.executable,
+        python,
         "-m",
         "gunicorn",
         "--workers",
@@ -251,7 +276,7 @@ def start_project(project_root: str, host: str, port: int, workers: int, threads
         "app:create_app()",
     ]
     try:
-        os.execvpe(sys.executable, command, environment)
+        os.execvpe(python, command, environment)
     except OSError as error:
         raise click.ClickException(f"Could not start Gunicorn: {error}") from error
 
@@ -294,11 +319,31 @@ def _project_environment(root: Path) -> dict[str, str]:
 def _run_flask_db_command(project_root: str, arguments: list[str]) -> None:
     root = Path(project_root).expanduser().resolve()
     environment = _project_environment(root)
+    python = _ensure_project_python(root, environment)
     _run_project_command(
-        [sys.executable, "-m", "flask", "--app", "app:create_app", "db", *arguments],
+        [python, "-m", "flask", "--app", "app:create_app", "db", *arguments],
         root,
         environment,
     )
+
+
+def _ensure_project_python(root: Path, environment: dict[str, str]) -> str:
+    venv_dir = root / ".venv"
+    scripts_dir = venv_dir / ("Scripts" if os.name == "nt" else "bin")
+    python = scripts_dir / ("python.exe" if os.name == "nt" else "python")
+    if not python.is_file():
+        venv.create(venv_dir, with_pip=True)
+
+    environment["VIRTUAL_ENV"] = str(venv_dir)
+    environment["PATH"] = os.pathsep.join((str(scripts_dir), environment.get("PATH", "")))
+    requirements = root / "requirements.txt"
+    if requirements.is_file():
+        requirement_hash = hashlib.sha256(requirements.read_bytes()).hexdigest()
+        marker = venv_dir / ".vflask-requirements.sha256"
+        if not marker.is_file() or marker.read_text(encoding="utf-8") != requirement_hash:
+            _run_project_command([str(python), "-m", "pip", "install", "-r", str(requirements)], root, environment)
+            marker.write_text(requirement_hash, encoding="utf-8")
+    return str(python)
 
 
 def _run_project_command(command: list[str], root: Path, environment: dict[str, str]) -> None:

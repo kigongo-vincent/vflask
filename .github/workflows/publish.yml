@@ -61,6 +61,14 @@ jobs:
 
           updated = text[:match.start()] + match.group(1) + version + match.group(3) + text[match.end():]
           path.write_text(updated)
+
+          init_path = Path("vflask/__init__.py")
+          init_text = init_path.read_text()
+          init_match = re.search(r'^(__version__\s*=\s*")([^"]*)(")', init_text, flags=re.M)
+          if not init_match:
+              raise SystemExit("Could not find __version__ in vflask/__init__.py")
+          init_updated = init_text[:init_match.start()] + init_match.group(1) + version + init_match.group(3) + init_text[init_match.end():]
+          init_path.write_text(init_updated)
           print(f"Set package version to {version}")
           PY
 

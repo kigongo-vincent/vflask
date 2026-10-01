@@ -741,7 +741,7 @@ vflask run</code></pre></div>
         <div class="container">
           <div class="section-header">
             <h2>Full app lifecycle</h2>
-            <p>From local development to release automation, the workflow is designed to be clear and safe.</p>
+            <p>From local development to release automation, the workflow is designed to feel like a real application framework, not a disposable starter.</p>
           </div>
 
           <div class="panel">
@@ -760,13 +760,23 @@ vflask run</code></pre></div>
                   <td>Create a clean app scaffold with standard structure</td>
                 </tr>
                 <tr>
-                  <td><strong>Module generation</strong></td>
+                  <td><strong>Domain modeling</strong></td>
                   <td><code>vflask module create products -f ...</code></td>
                   <td>Generate domain logic and tests with a compact schema</td>
                 </tr>
                 <tr>
+                  <td><strong>Auth and roles</strong></td>
+                  <td><code>python -m app.cli init-db</code></td>
+                  <td>Seed roles, create tables, and ready the app for auth</td>
+                </tr>
+                <tr>
+                  <td><strong>Provider wiring</strong></td>
+                  <td><code>GOOGLE_CLIENT_ID=... python -m app.cli run</code></td>
+                  <td>Connect OAuth, mail, payment, and storage through env configuration</td>
+                </tr>
+                <tr>
                   <td><strong>Local run</strong></td>
-                  <td><code>vflask run</code></td>
+                  <td><code>python -m app.cli run</code></td>
                   <td>Prepare services, apply migrations, and serve the app</td>
                 </tr>
                 <tr>
@@ -781,6 +791,33 @@ vflask run</code></pre></div>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Auth, providers, and env-first plugin flow</h2>
+            <p>The framework is designed so the app logic is already implemented and the remaining work is mostly environment wiring for real credentials and provider selection.</p>
+          </div>
+
+          <div class="panel">
+            <div class="code-block"><pre><code># app runtime flow
+python -m app.cli init-db
+python -m app.cli run
+
+# env-driven integrations
+export GOOGLE_CLIENT_ID=...
+export GOOGLE_CLIENT_SECRET=...
+export GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/auth/google/callback
+export PAYMENT_PROVIDER=flutterwave
+export STORAGE_PROVIDER=s3
+export MAIL_PROVIDER=smtp
+
+# custom provider override
+export PAYMENT_PROVIDER_CLASS=my_app.providers.CustomPaymentProvider
+</code></pre></div>
           </div>
         </div>
       </section>

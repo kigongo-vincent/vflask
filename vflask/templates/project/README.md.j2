@@ -38,10 +38,11 @@ vflask module create products \
 
 | Command | Purpose |
 | --- | --- |
-| `vflask run` | Prepare services and start the app |
-| `vflask watch --project-root .` | Regenerate docs when modules change |
+| `python -m app.cli run` | Start the generated app locally |
+| `python -m app.cli start` | Alias for starting the app |
+| `python -m app.cli push "feat: add module"` | Commit and push project changes |
+| `python -m app.cli --help` | Show the generated app command list |
 | `pytest -q` | Run the test suite |
-| `./scripts/push.sh "feat: add module"` | Commit and push changes |
 
 ## API docs
 

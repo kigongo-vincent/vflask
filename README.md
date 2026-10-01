@@ -1,33 +1,106 @@
 # vflask
 
-> Production-minded Flask scaffolding for teams building modern, maintainable apps without starting from a blank page.
+> A backend framework built on Flask for developers who want a production-ready app structure without writing the same boilerplate every time.
 
-<p align="center">
-  <img src="https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="Developer team working on a product" width="100%" />
-</p>
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Flask 3](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/) [![Postgres](https://img.shields.io/badge/PostgreSQL-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)](https://redis.io/) [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/) [![OpenAPI](https://img.shields.io/badge/OpenAPI-6BA539?logo=openapiinitiative&logoColor=white)](https://www.openapis.org/) [![Alembic](https://img.shields.io/badge/Alembic-6D5EAC)](https://alembic.sqlalchemy.org/)
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Flask 3](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/) [![CI](https://img.shields.io/badge/CLI-vflask-FF385C)](https://pypi.org/project/vflask/)
+## What Flask is
 
-vflask turns a blank Flask project into a structured foundation for real products. It gives teams a clean app skeleton, typed module generation, auth, RBAC, migrations, tests, deployment workflows, and a dependable local runtime from day one.
+Flask is a lightweight Python web framework. It gives you routes, request handling, and a simple app setup, but it does not give you a full production backend structure by default.
 
-## Why teams use vflask
+A typical Flask app usually needs you to add:
 
-- Clean application structure with clear separation of concerns
-- Typed CRUD module generation to reduce repetitive boilerplate
-- JWT auth, OAuth, service integrations, and RBAC scaffolding
-- Database migrations and safe schema evolution
-- Built-in health checks, Docker support, and deployment conventions
-- Better onboarding for junior engineers and more consistency for senior teams
+- app factory setup
+- database models
+- migration tooling
+- auth and role checks
+- service layer organization
+- tests
+- deployment scripts
+- environment-based configuration
 
-## Quick start
+## What vflask adds
+
+vflask is a backend starter built on top of Flask. It gives you a usable structure for building real apps faster while staying close to Flask and Python conventions.
+
+It adds:
+
+- project scaffolding
+- domain module generation
+- app factory pattern
+- SQLAlchemy models
+- Alembic migrations
+- JWT auth and refresh flow
+- RBAC helpers
+- OAuth and provider adapters
+- integration patterns for email, storage, and payment
+- CLI commands for local development and project tasks
+
+## When to use vflask
+
+Use vflask when you want to build a backend service, internal platform, SaaS API, or admin system without setting up the same patterns repeatedly.
+
+It is useful if you want:
+
+- a consistent project structure
+- reusable CRUD patterns
+- auth and authorization by default
+- safer database changes through migrations
+- faster project bootstrapping
+- a path toward production without rewriting everything
+
+## Install
 
 ```bash
 python -m pip install vflask
+```
+
+## Create a project
+
+```bash
 vflask new bookstore
 cd bookstore
 ```
 
-Create a business module:
+This creates a project structure with a Flask app factory, config files, migrations, tests, and starter modules.
+
+## Understand the app factory
+
+This is the most important concept in Flask and in vflask.
+
+An app factory is a function that creates your Flask app. It keeps configuration and setup in one place instead of creating globals everywhere.
+
+```python
+from app import create_app
+
+app = create_app()
+```
+
+The generated app usually does things like:
+
+- load environment variables
+- configure Flask
+- initialize the database
+- register blueprints
+- set up auth and routes
+- add health and docs endpoints
+
+You do not need to know every detail of Flask before using vflask. The key idea is: the app is created in one place and then used by the runtime.
+
+## Your real backend workflow
+
+Here is the workflow a backend developer normally follows in vflask.
+
+### 1) Create the project
+
+```bash
+vflask new fintech-api
+cd fintech-api
+```
+
+### 2) Generate a domain module
+
+For a real system, you usually create domain modules such as users, products, orders, invoices, or subscriptions.
 
 ```bash
 vflask module create products \
@@ -37,13 +110,110 @@ vflask module create products \
   -r admin -r editor
 ```
 
-Run the application:
+This generates files for a business module, such as:
+
+- models
+- routes
+- services
+- handlers
+- tests
+- migration stub
+
+### 3) Add the database model
+
+Generated module files create a model for your data. For example, a product might have fields like name, price, and sku.
+
+The generated app uses SQLAlchemy, so relationships, validation, and migrations are handled in a structured way.
+
+### 4) Run migrations
+
+When the schema changes, you migrate it instead of editing the database manually.
+
+```bash
+python -m app.cli init-db
+```
+
+If you are using the standard Flask CLI flow, you may also use migration commands in the generated app depending on the project runtime.
+
+### 5) Add auth and roles
+
+Most business systems need authentication and authorization.
+
+The generated project already includes patterns for:
+
+- signup
+- login
+- refresh tokens
+- user profile
+- logout
+- RBAC checks
+- Google OAuth routes
+
+A simple backend pattern looks like this:
+
+```python
+from flask_jwt_extended import jwt_required
+
+@jwt_required()
+def get_profile():
+    return {"ok": True}
+```
+
+The main point is that vflask gives you a consistent place for auth, not a scattered set of ad-hoc checks across the app.
+
+### 6) Add provider integrations
+
+Real apps talk to external systems. vflask supports patterns for:
+
+- email delivery
+- object storage
+- payments
+- OAuth providers
+
+Example env config:
+
+```bash
+export PAYMENT_PROVIDER=flutterwave
+export STORAGE_PROVIDER=s3
+export MAIL_PROVIDER=smtp
+export GOOGLE_CLIENT_ID=your-client-id
+export GOOGLE_CLIENT_SECRET=your-client-secret
+export GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/auth/google/callback
+```
+
+This keeps provider logic separate from the business logic.
+
+### 7) Run the project
+
+Local development is simple:
+
+```bash
+python -m app.cli run
+```
+
+You can also use the package-level CLI for scaffolding:
 
 ```bash
 vflask run
 ```
 
-## Full app structure
+The app runtime is designed to behave like a real backend service, not just a static template.
+
+### 8) Test it
+
+```bash
+pytest -q
+```
+
+Generated modules usually include tests so you can validate each domain area as it grows.
+
+### 9) Deploy
+
+The generated project is structured with Docker, env configuration, and release flow in mind. That means you can move from local development to deployment without rebuilding your entire architecture.
+
+## App structure
+
+A generated vflask project usually looks like this:
 
 ```text
 app/
@@ -54,120 +224,120 @@ app/
   modules/
   tests/
   migrations/
-  Dockerfile
-  docker-compose.yml
-  .env.example
-  scripts/
-  .github/
+  cli.py
+  __init__.py
+Dockerfile
+docker-compose.yml
+.env.example
+scripts/
 ```
 
-## What gets generated
+The important idea is that the app is organized around real backend concerns:
 
-| Artifact | Purpose | Why it matters |
-| --- | --- | --- |
-| `models.py` | SQLAlchemy schema | Creates the data contract |
-| `routes.py` | HTTP endpoints and blueprints | Exposes the API surface |
-| `services.py` | Business logic | Keeps handlers thin and testable |
-| `handlers.py` | Validation and response shaping | Reduces invalid input and duplicate logic |
-| `migration.py` | Alembic revision stub | Safely tracks schema changes |
-| `test_module.py` | Module-level tests | Prevents regressions early |
+- auth
+- business modules
+- base utilities
+- integrations
+- migrations
+- deployment scripts
 
-## Module field system
+## Common commands
 
-### Supported field types
-
-- `string`
-- `text`
-- `integer`
-- `float`
-- `decimal`
-- `boolean`
-- `date`
-- `datetime`
-- `json`
-- `uuid`
-
-### Supported flags
-
-- `required`
-- `unique`
-- `index`
-- `nullable`
-- `default=value`
-
-### Example
-
-```text
-name:string:required
-sku:string:unique
-price:decimal:required
-metadata:json
-```
-
-## CLI reference
-
-| Command | Purpose |
-| --- | --- |
-| `vflask new <project>` | Create a new project scaffold |
-| `vflask module create <name> -f ...` | Generate a typed business module |
-| `vflask run` | Start the app with local services by default |
-| `vflask run --no-services` | Use your own Postgres/Redis instead of Compose |
-| `vflask watch --project-root .` | Regenerate docs when modules change |
-
-## Local workflow
+### Scaffold a new project
 
 ```bash
-pytest -q
-python -m build
-python -m twine check dist/*
+vflask new myapp
 ```
 
-### Release behavior
+### Generate a module
 
-- Default package version starts at `1.0.0`
-- Tagged versions such as `v1.2.3` work as semantic releases
-- First publish creates a missing PyPI project automatically
-- Repeated uploads of the same version are skipped safely
+```bash
+vflask module create products \
+  -f name:string:required \
+  -f price:decimal:required
+```
 
-## Common enterprise edge cases
+### Run the generated app
 
-| Scenario | Recommended approach |
-| --- | --- |
-| Missing environment variables | Copy `.env.example` to `.env` and fill in the real values |
-| Database drift | Use Alembic migrations instead of editing schema by hand |
-| OAuth failures | Verify the exact `GOOGLE_REDIRECT_URI` and app credentials |
-| Local service startup race | Wait for Postgres and Redis readiness or use `--no-services` |
-| Secret leaks | Store values in CI/CD or a secret manager, not source control |
-| Duplicate package uploads | Use a valid version tag or rely on the `1.0.0` default for first release |
+```bash
+python -m app.cli run
+```
+
+### Check help
+
+```bash
+vflask --help
+python -m app.cli --help
+```
+
+## Example backend flow
+
+A simple SaaS backend might look like this:
+
+1. User signs up
+2. User logs in with JWT
+3. App validates roles and permissions
+4. Product module exposes CRUD endpoints
+5. Database stores product records
+6. Storage and email services are called when needed
+7. Tests cover key business rules
+8. Deployment runs with Docker and env config
+
+This is the typical shape of a real vflask backend project.
 
 ## Environment variables
 
-Use these values when enabling provider integrations or deployment automation:
+Use environment variables for secrets and provider settings. Keep them out of source control.
 
+Common variables include:
+
+- `SECRET_KEY`
+- `DATABASE_URL`
+- `JWT_SECRET_KEY`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REDIRECT_URI`
-- `EC2_SSH_KEY`
+- `PAYMENT_PROVIDER`
+- `MAIL_PROVIDER`
+- `STORAGE_PROVIDER`
 
-## Production checklist
-
-- Keep secrets in environment variables or a secret manager
-- Use managed Postgres in production
-- Run tests before each deployment
-- Use Alembic for schema changes
-- Keep Docker and health checks in the release path
-- Version packages with semantic versioning
-
-## Terminal help
+Example:
 
 ```bash
-./scripts/help.sh
+export DATABASE_URL=postgresql://user:pass@localhost:5432/app
+export SECRET_KEY=your-secret-key
+export JWT_SECRET_KEY=your-jwt-secret
 ```
 
-## Visual landing page
+## Production mindset
 
-For the more polished static landing page with custom SVG sections and Pexels imagery, open [docs/index.html](docs/index.html) in a browser.
+vflask is not a toy framework. It is meant to give you a backend layout that is strong enough for a real product.
+
+A good backend is usually built around:
+
+- clean separation of concerns
+- explicit auth
+- migration-safe schema changes
+- env-based configuration
+- testing
+- integration boundaries
+- deployable runtime setup
+
+vflask tries to give you those defaults from the beginning.
+
+## Recommended next steps
+
+If you are starting from scratch:
+
+1. create a project with `vflask new`
+2. generate your first real domain module
+3. connect your database and auth settings
+4. add endpoints and business logic
+5. write tests early
+6. deploy through Docker or CI flow
+
+## Documentation note
+
+The richer visual landing page remains available in [docs/index.html](docs/index.html), but the repository README is intentionally written as a backend developer guide instead of a marketing page.
 
 ---
-
-vflask is designed to help teams build enterprise-ready Flask apps with a clean architecture, predictable CRUD generation, and safer production defaults.

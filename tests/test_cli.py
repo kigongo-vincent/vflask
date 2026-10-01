@@ -8,6 +8,20 @@ from vflask.cli.main import cli
 from vflask.core.scaffolder import ModuleScaffolder, ProjectScaffolder
 
 
+def test_generated_app_cli_uses_project_commands_instead_of_manual_scripts(tmp_path: Path) -> None:
+    project_dir = tmp_path / "demo_app"
+    ProjectScaffolder.render_project("demo_app", project_dir)
+
+    cli_text = (project_dir / "app" / "cli.py").read_text()
+    readme = (project_dir / "README.md").read_text()
+
+    assert '@main.command("run")' in cli_text
+    assert '@main.command("push")' in cli_text
+    assert 'subprocess.run(["git", "push"]' in cli_text
+    assert './scripts/push.sh' not in readme
+    assert 'python -m app.cli push' in readme
+
+
 def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
     project_dir = tmp_path / "demo_app"
     ProjectScaffolder.render_project("demo_app", project_dir)
@@ -60,7 +74,7 @@ def test_project_scaffolder_creates_expected_files(tmp_path: Path) -> None:
     assert "-m app.cli init-db" in entrypoint
     assert "entrypoint.sh" in (project_dir / "Dockerfile").read_text()
     start_script = (project_dir / "scripts" / "start.sh").read_text()
-    assert "vflask run" in start_script
+    assert "python -m app.cli run" in start_script
     init_command = (project_dir / "app" / "cli.py").read_text()
     assert "db.create_all()" in init_command
     assert "RBACService.seed_roles()" in init_command

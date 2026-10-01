@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+
 import click
 from dotenv import load_dotenv
 
@@ -19,6 +22,29 @@ def main() -> None:
     pass
 
 
+def _run_app(host: str, port: int, debug: bool) -> None:
+    app = create_app()
+    app.run(host=host, port=port, debug=debug)
+
+
+@main.command("run")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Host interface for the Flask dev server.")
+@click.option("--port", default=5000, type=int, show_default=True, help="Port for the Flask dev server.")
+@click.option("--debug/--no-debug", default=True, show_default=True, help="Enable Flask debug reloader.")
+def run_app(host: str, port: int, debug: bool) -> None:
+    """Run the generated application locally."""
+    _run_app(host=host, port=port, debug=debug)
+
+
+@main.command("start")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Host interface for the Flask dev server.")
+@click.option("--port", default=5000, type=int, show_default=True, help="Port for the Flask dev server.")
+@click.option("--debug/--no-debug", default=True, show_default=True, help="Enable Flask debug reloader.")
+def start_app(host: str, port: int, debug: bool) -> None:
+    """Alias for starting the app locally."""
+    _run_app(host=host, port=port, debug=debug)
+
+
 @main.command()
 def init_db() -> None:
     """Create missing tables and seed default roles."""
@@ -27,6 +53,25 @@ def init_db() -> None:
         db.create_all()
         RBACService.seed_roles()
         click.echo("✅ Database tables and default roles are ready")
+
+
+@main.command("push")
+@click.argument("message", required=False, default="chore: update project")
+def push_project(message: str) -> None:
+    """Stage, commit, and push the generated app project to git."""
+    repo_root = Path(__file__).resolve().parents[1]
+
+    subprocess.run(["git", "status", "--short"], cwd=repo_root, check=True)
+    subprocess.run(["git", "add", "."], cwd=repo_root, check=True)
+
+    try:
+        subprocess.run(["git", "commit", "-m", message], cwd=repo_root, check=True)
+    except subprocess.CalledProcessError:
+        click.echo("ℹ️ No changes to commit.")
+        return
+
+    subprocess.run(["git", "push"], cwd=repo_root, check=True)
+    click.echo("✅ Changes pushed successfully.")
 
 
 @main.command()

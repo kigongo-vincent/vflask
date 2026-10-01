@@ -33,16 +33,11 @@ jobs:
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           python - <<'PY'
           import os, re
           from pathlib import Path
 
           ref_name = os.environ.get("GITHUB_REF_NAME", "")
-          version = ref_name[1:] if ref_name.startswith("v") else ref_name
-          if not version:
-              version = "1.0.0"
-
           path = Path("pyproject.toml")
           text = path.read_text()
           match = re.search(r'^(version\s*=\s*")([^"]*)(")', text, flags=re.M)
@@ -50,13 +45,19 @@ jobs:
               raise SystemExit("Could not find version in pyproject.toml")
 
           current = match.group(2)
-          if current == version:
-              parts = [int(part) for part in current.split(".")]
-              if len(parts) != 3:
-                  parts = [0, 0, 0]
-              parts[2] += 1
-              version = ".".join(str(part) for part in parts)
-              print(f"Version already exists on the branch; bumping to {version}")
+          version = "1.0.0"
+
+          if ref_name.startswith("v") and ref_name[1:]:
+              version = ref_name[1:]
+          else:
+              if current and all(part.isdigit() for part in current.split(".")) and len(current.split(".")) == 3:
+                  parts = [int(part) for part in current.split(".")]
+                  parts[2] += 1
+                  version = ".".join(str(part) for part in parts)
+              elif current:
+                  version = current
+              else:
+                  version = "1.0.0"
 
           updated = text[:match.start()] + match.group(1) + version + match.group(3) + text[match.end():]
           path.write_text(updated)

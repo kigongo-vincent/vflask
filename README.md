@@ -1,19 +1,23 @@
 # vflask
 
-A production-minded Flask scaffolder for teams that want cleaner architecture, faster module generation, and safer defaults from day one.
+> Production-minded Flask scaffolding for teams building modern, maintainable apps without starting from a blank page.
 
-## Why vflask
+<p align="center">
+  <img src="https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="Developer team working on a product" width="100%" />
+</p>
 
-vflask helps you go from an empty Flask app to a structured product foundation without hiding Flask behind a heavy abstraction layer.
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![Flask 3](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/) [![CI](https://img.shields.io/badge/CLI-vflask-FF385C)](https://pypi.org/project/vflask/)
 
-It gives you:
+vflask turns a blank Flask project into a structured foundation for real products. It gives teams a clean app skeleton, typed module generation, auth, RBAC, migrations, tests, deployment workflows, and a dependable local runtime from day one.
 
-- app factory + configuration defaults
-- typed module generation for CRUD features
-- JWT auth and Google OAuth scaffolding
-- Alembic migrations and schema tracking
-- tests, docs, Docker support, and deployment workflows
-- sane defaults for local development and production readiness
+## Why teams use vflask
+
+- Clean application structure with clear separation of concerns
+- Typed CRUD module generation to reduce repetitive boilerplate
+- JWT auth, OAuth, service integrations, and RBAC scaffolding
+- Database migrations and safe schema evolution
+- Built-in health checks, Docker support, and deployment conventions
+- Better onboarding for junior engineers and more consistency for senior teams
 
 ## Quick start
 
@@ -23,7 +27,7 @@ vflask new bookstore
 cd bookstore
 ```
 
-Create a module:
+Create a business module:
 
 ```bash
 vflask module create products \
@@ -33,13 +37,13 @@ vflask module create products \
   -r admin -r editor
 ```
 
-Run the app:
+Run the application:
 
 ```bash
 vflask run
 ```
 
-## Project structure
+## Full app structure
 
 ```text
 app/
@@ -53,21 +57,24 @@ app/
   Dockerfile
   docker-compose.yml
   .env.example
+  scripts/
+  .github/
 ```
 
-## CLI reference
+## What gets generated
 
-| Command | Purpose |
-| --- | --- |
-| `vflask new <project>` | Create a fresh project scaffold |
-| `vflask module create <name> -f ...` | Generate a typed business module |
-| `vflask run` | Start the app with local services by default |
-| `vflask run --no-services` | Run without Compose-managed Postgres/Redis |
-| `vflask watch --project-root .` | Regenerate docs when modules change |
+| Artifact | Purpose | Why it matters |
+| --- | --- | --- |
+| `models.py` | SQLAlchemy schema | Creates the data contract |
+| `routes.py` | HTTP endpoints and blueprints | Exposes the API surface |
+| `services.py` | Business logic | Keeps handlers thin and testable |
+| `handlers.py` | Validation and response shaping | Reduces invalid input and duplicate logic |
+| `migration.py` | Alembic revision stub | Safely tracks schema changes |
+| `test_module.py` | Module-level tests | Prevents regressions early |
 
 ## Module field system
 
-Supported field types:
+### Supported field types
 
 - `string`
 - `text`
@@ -80,7 +87,7 @@ Supported field types:
 - `json`
 - `uuid`
 
-Supported flags:
+### Supported flags
 
 - `required`
 - `unique`
@@ -88,7 +95,7 @@ Supported flags:
 - `nullable`
 - `default=value`
 
-Example:
+### Example
 
 ```text
 name:string:required
@@ -97,7 +104,17 @@ price:decimal:required
 metadata:json
 ```
 
-## Testing and deployment
+## CLI reference
+
+| Command | Purpose |
+| --- | --- |
+| `vflask new <project>` | Create a new project scaffold |
+| `vflask module create <name> -f ...` | Generate a typed business module |
+| `vflask run` | Start the app with local services by default |
+| `vflask run --no-services` | Use your own Postgres/Redis instead of Compose |
+| `vflask watch --project-root .` | Regenerate docs when modules change |
+
+## Local workflow
 
 ```bash
 pytest -q
@@ -105,31 +122,41 @@ python -m build
 python -m twine check dist/*
 ```
 
-Release behavior:
+### Release behavior
 
-- default package version starts at `1.0.0`
-- tagged releases like `v1.2.3` work as semantic version updates
-- first publish creates a missing PyPI project
-- repeated uploads of the same version are skipped safely
+- Default package version starts at `1.0.0`
+- Tagged versions such as `v1.2.3` work as semantic releases
+- First publish creates a missing PyPI project automatically
+- Repeated uploads of the same version are skipped safely
 
-## Common edge cases
+## Common enterprise edge cases
 
 | Scenario | Recommended approach |
 | --- | --- |
-| Missing env vars | Copy `.env.example` to `.env` and fill in values |
-| Schema drift | Use Alembic migrations instead of editing DB schema by hand |
-| OAuth errors | Verify the exact public `GOOGLE_REDIRECT_URI` |
-| Local DB startup race | Wait for Postgres and Redis readiness or use `--no-services` |
-| Secret leaks | Keep secrets in CI/CD or secret managers, not source control |
+| Missing environment variables | Copy `.env.example` to `.env` and fill in the real values |
+| Database drift | Use Alembic migrations instead of editing schema by hand |
+| OAuth failures | Verify the exact `GOOGLE_REDIRECT_URI` and app credentials |
+| Local service startup race | Wait for Postgres and Redis readiness or use `--no-services` |
+| Secret leaks | Store values in CI/CD or a secret manager, not source control |
+| Duplicate package uploads | Use a valid version tag or rely on the `1.0.0` default for first release |
+
+## Environment variables
+
+Use these values when enabling provider integrations or deployment automation:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `EC2_SSH_KEY`
 
 ## Production checklist
 
-- keep secrets in environment variables or a secret manager
-- use managed Postgres in production
-- run tests before every release
-- use migrations for schema changes
-- use Docker and health checks for deployability
-- version packages with semantic versioning
+- Keep secrets in environment variables or a secret manager
+- Use managed Postgres in production
+- Run tests before each deployment
+- Use Alembic for schema changes
+- Keep Docker and health checks in the release path
+- Version packages with semantic versioning
 
 ## Terminal help
 
@@ -137,17 +164,10 @@ Release behavior:
 ./scripts/help.sh
 ```
 
-## Visual docs
+## Visual landing page
 
-For the full styled landing page with SVG accents and Pexels imagery, open [docs/index.html](docs/index.html) in a browser.
+For the more polished static landing page with custom SVG sections and Pexels imagery, open [docs/index.html](docs/index.html) in a browser.
 
-## Environment variables
+---
 
-Use these values in production or local setup when enabling provider integrations:
-
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REDIRECT_URI`
-- `EC2_SSH_KEY`
-
-This project is designed to help teams build enterprise-ready Flask apps with a clean architecture, predictable CRUD generation, and safe production defaults.
+vflask is designed to help teams build enterprise-ready Flask apps with a clean architecture, predictable CRUD generation, and safer production defaults.

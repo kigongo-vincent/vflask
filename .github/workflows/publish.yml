@@ -50,13 +50,12 @@ jobs:
               raise SystemExit("Could not find version in pyproject.toml")
 
           current = match.group(2)
-          if current == version:
-              print(f"Package version already set to {version}")
-              raise SystemExit(0)
-
-          updated = text[:match.start()] + match.group(1) + version + match.group(3) + text[match.end():]
-          path.write_text(updated)
-          print(f"Set package version to {version}")
+          if current != version:
+              updated = text[:match.start()] + match.group(1) + version + match.group(3) + text[match.end():]
+              path.write_text(updated)
+              print(f"Set package version to {version}")
+          else:
+              print(f"Package version already set to {version}; continuing with build and PyPI upload check.")
           PY
 
       - name: Build package

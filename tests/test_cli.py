@@ -1,11 +1,20 @@
 import ast
+import tomllib
 from types import SimpleNamespace
 from pathlib import Path
 
 from click.testing import CliRunner
 
+import vflask
 from vflask.cli.main import cli
 from vflask.core.scaffolder import ModuleScaffolder, ProjectScaffolder
+
+
+def test_package_version_matches_pyproject() -> None:
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    data = tomllib.loads(pyproject.read_text())
+
+    assert vflask.__version__ == data["project"]["version"]
 
 
 def test_generated_app_cli_uses_project_commands_instead_of_manual_scripts(tmp_path: Path) -> None:

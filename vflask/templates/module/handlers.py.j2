@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from flask import Response, request
 
-from app.base import api_error, api_ok, paginated_response
+from app.base import api_error, api_ok
+{% if 'r' in crud_mode %}
+from app.base import paginated_response
+{% endif %}
 from app.base.types import JSONObject, json_object
 from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
 
@@ -15,6 +18,7 @@ class {{ module.class_name }}Handler:
     def __init__(self) -> None:
         self.service = {{ module.class_name }}Service()
 
+{% if 'r' in crud_mode %}
     def list(self) -> tuple[Response, int]:
         """List {{ module.table_name }} with pagination and filters."""
         req = json_object(request.get_json(silent=True))
@@ -53,7 +57,9 @@ class {{ module.class_name }}Handler:
             page,
             limit,
         )
+{% endif %}
 
+{% if 'c' in crud_mode %}
     def create(self) -> tuple[Response, int]:
         """Create a new {{ module.singular }}."""
         body: JSONObject = json_object(request.get_json(silent=True))
@@ -64,14 +70,18 @@ class {{ module.class_name }}Handler:
         except Exception as e:
             return api_error(str(e), 500)
         return api_ok(item.to_dict(), msg="created", status=201)
+{% endif %}
 
+{% if 'r' in crud_mode %}
     def get(self, item_id: int) -> tuple[Response, int]:
         """Get a single {{ module.singular }}."""
         item = self.service.get_{{ module.singular }}(item_id)
         if not item or item.deleted_at:
             return api_error("{{ module.class_name }} not found", 404)
         return api_ok(item.to_dict())
+{% endif %}
 
+{% if 'u' in crud_mode %}
     def update(self, item_id: int) -> tuple[Response, int]:
         """Update a {{ module.singular }}."""
         body: JSONObject = json_object(request.get_json(silent=True))
@@ -79,7 +89,9 @@ class {{ module.class_name }}Handler:
         if not item:
             return api_error("{{ module.class_name }} not found", 404)
         return api_ok(item.to_dict(), msg="updated")
+{% endif %}
 
+{% if 'd' in crud_mode %}
     def delete(self, item_id: int) -> tuple[Response, int]:
         """Soft delete a {{ module.singular }}."""
         if not self.service.delete_{{ module.singular }}(item_id):
@@ -96,3 +108,4 @@ class {{ module.class_name }}Handler:
             return api_error("Invalid payload: ids array required")
         count = self.service.bulk_delete([item for item in ids if isinstance(item, int)])
         return api_ok({"deleted": count}, msg="bulk deleted successfully")
+    {% endif %}

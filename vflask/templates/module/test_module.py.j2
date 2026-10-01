@@ -1,25 +1,90 @@
+from collections.abc import Iterator
 from datetime import datetime, timezone
+{% if needs_date_import %}
+from datetime import date
+{% endif %}
+from typing import cast
 
+from flask import Flask
+from flask.testing import FlaskClient
+import pytest
+from flask_jwt_extended import create_access_token  # pyright: ignore[reportUnknownVariableType]
+from werkzeug.test import TestResponse
+
+from app.base.types import JSONObject, json_object
+from app.extensions import db
 from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
+from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
+
+
+def _sample_data() -> JSONObject:
+    return cast(JSONObject, {
+{% for field in fields %}
+        "{{ field.name }}": {{ field.test_value }},
+{% endfor %}
+{% if not fields %}
+        "name": "example",
+{% endif %}
+    })
+
+
+def _endpoint_data() -> JSONObject:
+    data = _sample_data()
+{% for field in fields if field.type in ('date', 'datetime') %}
+    value = data.get("{{ field.name }}")
+    if isinstance(value, (date, datetime)):
+        data["{{ field.name }}"] = value.isoformat()
+{% endfor %}
+    return data
+
+
+def _response_data(response: TestResponse) -> JSONObject:
+    return json_object(cast(object, response.get_json()))
+
+
+def _response_payload(response: TestResponse) -> JSONObject:
+    payload = _response_data(response).get("data")
+    assert isinstance(payload, dict)
+    return payload
+
+
+@pytest.fixture
+def app() -> Iterator[Flask]:
+    from app import create_app
+    from app.config import TestingConfig
+
+    test_app: Flask = create_app(TestingConfig)
+    with test_app.app_context():
+        db.create_all()
+    yield test_app
+    with test_app.app_context():
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture
+def client(app: Flask) -> FlaskClient:
+    return app.test_client()
+
+
+@pytest.fixture
+def auth_headers(app: Flask) -> dict[str, str]:
+    with app.app_context():
+        token = create_access_token(identity="{{ roles[0] }}")
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_{{ module.singular }}_model_field_names() -> None:
     assert {{ module.class_name }}.id is not None
-    {% for field in fields %}
+{% for field in fields %}
     assert {{ module.class_name }}.{{ field.name }} is not None
-    {% endfor %}
+{% endfor %}
 
 
 def test_{{ module.singular }}_serialization_returns_declared_fields() -> None:
     now = datetime.now(timezone.utc)
-    item = {{ module.class_name }}()
+    item = {{ module.class_name }}(**_sample_data())
     item.id = 1
-{% for field in fields %}
-    item.{{ field.name }} = {{ field.test_value }}
-{% endfor %}
-{% if not fields %}
-    item.name = "example"
-{% endif %}
     item.created_at = now
     item.updated_at = now
 
@@ -28,11 +93,208 @@ def test_{{ module.singular }}_serialization_returns_declared_fields() -> None:
 {% for field in fields %}
     assert "{{ field.name }}" in data
 {% endfor %}
+{% if not fields %}
+    assert "name" in data
+{% endif %}
     assert "createdAt" in data
     assert "updatedAt" in data
 
 
-def test_{{ module.singular }}_service_can_be_constructed() -> None:
-    from app.modules.{{ module.table_name }}.service import {{ module.class_name }}Service
+def test_{{ module.singular }}_service_creates_records(app: Flask) -> None:
+    with app.app_context():
+        item = {{ module.class_name }}Service().create_{{ module.singular }}(_sample_data())
+        assert item.id is not None
 
-    assert isinstance({{ module.class_name }}Service(), {{ module.class_name }}Service)
+{% if 'r' in crud_mode %}
+def test_{{ module.singular }}_service_reads_and_searches_records(app: Flask) -> None:
+    with app.app_context():
+        service = {{ module.class_name }}Service()
+        item = service.create_{{ module.singular }}(_sample_data())
+        rows, total = service.list_{{ module.table_name }}(
+            {"pagination": {"page": 1, "limit": 10}}
+        )
+        assert total == 1
+        assert [row.id for row in rows] == [item.id]
+        assert service.get_{{ module.singular }}(item.id) is item
+        assert service.get_{{ module.singular }}(-1) is None
+{% if not fields or fields | selectattr('type', 'in', ['string', 'text']) | list %}
+        search_value = str(_sample_data()["{% if fields %}{{ (fields | selectattr('type', 'in', ['string', 'text']) | first).name }}{% else %}name{% endif %}"])
+        search_rows, search_total = service.list_{{ module.table_name }}(
+            {"pagination": {"page": 1, "limit": 10}, "search": search_value}
+        )
+        assert search_total == 1
+        assert [row.id for row in search_rows] == [item.id]
+{% endif %}
+
+
+@pytest.mark.parametrize(
+    "pagination",
+    [
+        {},
+        {"page": 0, "limit": 1},
+        {"page": 1, "limit": 0},
+        {"page": 1, "limit": 101},
+        {"page": True, "limit": 1},
+    ],
+)
+def test_{{ module.singular }}_service_rejects_invalid_pagination(
+    app: Flask, pagination: JSONObject
+) -> None:
+    with app.app_context(), pytest.raises(ValueError):
+        {{ module.class_name }}Service().list_{{ module.table_name }}(
+            {"pagination": pagination}
+        )
+{% endif %}
+
+{% if 'u' in crud_mode %}
+def test_{{ module.singular }}_service_updates_records(app: Flask) -> None:
+    with app.app_context():
+        service = {{ module.class_name }}Service()
+        item = service.create_{{ module.singular }}(_sample_data())
+{% if fields %}
+        updated_value = (
+            {% if fields[0].type in ('string', 'text', 'uuid') %}"updated"{% elif fields[0].type in ('integer', 'int') %}2{% elif fields[0].type in ('float', 'decimal') %}2.5{% elif fields[0].type in ('boolean', 'bool') %}False{% elif fields[0].type == 'date' %}datetime.now(timezone.utc).date(){% elif fields[0].type == 'datetime' %}datetime.now(timezone.utc){% elif fields[0].type == 'json' %}{"updated": True}{% else %}{{ fields[0].test_value }}{% endif %}
+        )
+        updated = service.update_{{ module.singular }}(
+            item.id, cast(JSONObject, {"{{ fields[0].name }}": updated_value})
+        )
+        assert updated is not None
+        assert updated.{{ fields[0].name }} == updated_value
+{% else %}
+        updated = service.update_{{ module.singular }}(item.id, {"name": "updated"})
+        assert updated is not None
+        assert updated.name == "updated"
+{% endif %}
+        assert service.update_{{ module.singular }}(-1, {}) is None
+{% endif %}
+
+{% if 'd' in crud_mode %}
+def test_{{ module.singular }}_service_soft_deletes_records(app: Flask) -> None:
+    with app.app_context():
+        service = {{ module.class_name }}Service()
+        item = service.create_{{ module.singular }}(_sample_data())
+        assert service.delete_{{ module.singular }}(item.id) is True
+        assert item.deleted_at is not None
+        assert service.delete_{{ module.singular }}(-1) is False
+
+
+def test_{{ module.singular }}_service_bulk_deletes_records(app: Flask) -> None:
+    with app.app_context():
+        service = {{ module.class_name }}Service()
+        item = service.create_{{ module.singular }}(_sample_data())
+        assert service.bulk_delete([item.id, -1]) == 1
+        assert item.deleted_at is not None
+        assert service.bulk_delete([]) == 0
+{% endif %}
+
+
+def test_{{ module.singular }}_http_creates_records(
+    client: FlaskClient, auth_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        "{{ module.url_prefix }}/", json=_endpoint_data(), headers=auth_headers
+    )
+    assert response.status_code == 201
+    assert isinstance(_response_payload(response).get("id"), int)
+
+
+def test_{{ module.singular }}_http_requires_authentication(client: FlaskClient) -> None:
+    assert client.post("{{ module.url_prefix }}/", json=_endpoint_data()).status_code == 401
+{% if 'r' in crud_mode %}
+    assert client.get("{{ module.url_prefix }}/1").status_code == 401
+{% endif %}
+{% if 'u' in crud_mode %}
+    assert client.put("{{ module.url_prefix }}/1", json={}).status_code == 401
+{% endif %}
+{% if 'd' in crud_mode %}
+    assert client.delete("{{ module.url_prefix }}/1").status_code == 401
+    assert client.post("{{ module.url_prefix }}/bulk-delete", json={"ids": []}).status_code == 401
+{% endif %}
+
+{% if 'r' in crud_mode %}
+def test_{{ module.singular }}_http_reads_and_validates_pagination(
+    client: FlaskClient, auth_headers: dict[str, str]
+) -> None:
+    create_response = client.post(
+        "{{ module.url_prefix }}/", json=_endpoint_data(), headers=auth_headers
+    )
+    item_id = _response_payload(create_response).get("id")
+    assert isinstance(item_id, int)
+
+    list_response = client.post(
+        "{{ module.url_prefix }}/list",
+        json={"pagination": {"page": 1, "limit": 10}},
+        headers=auth_headers,
+    )
+    assert list_response.status_code == 200
+    assert _response_payload(list_response)["total"] == 1
+    assert client.get(
+        f"{{ module.url_prefix }}/{item_id}", headers=auth_headers
+    ).status_code == 200
+
+    invalid_response = client.post(
+        "{{ module.url_prefix }}/list",
+        json={"pagination": {"page": 1, "limit": 101}},
+        headers=auth_headers,
+    )
+    assert invalid_response.status_code == 400
+{% endif %}
+
+{% if 'u' in crud_mode %}
+def test_{{ module.singular }}_http_updates_records(
+    client: FlaskClient, auth_headers: dict[str, str]
+) -> None:
+    create_response = client.post(
+        "{{ module.url_prefix }}/", json=_endpoint_data(), headers=auth_headers
+    )
+    item_id = _response_payload(create_response).get("id")
+    assert isinstance(item_id, int)
+{% if fields %}
+    update_data = {"{{ fields[0].name }}": {% if fields[0].type in ('string', 'text', 'uuid') %}"endpoint-updated"{% elif fields[0].type in ('integer', 'int') %}2{% elif fields[0].type in ('float', 'decimal') %}2.5{% elif fields[0].type in ('boolean', 'bool') %}False{% elif fields[0].type == 'date' %}datetime.now(timezone.utc).date().isoformat(){% elif fields[0].type == 'datetime' %}datetime.now(timezone.utc).isoformat(){% elif fields[0].type == 'json' %}{"updated": True}{% else %}{{ fields[0].test_value }}{% endif %}}
+{% else %}
+    update_data = {"name": "endpoint-updated"}
+{% endif %}
+    response = client.put(
+        f"{{ module.url_prefix }}/{item_id}", json=update_data, headers=auth_headers
+    )
+    assert response.status_code == 200
+    assert _response_data(response)["msg"] == "updated"
+{% endif %}
+
+{% if 'd' in crud_mode %}
+def test_{{ module.singular }}_http_deletes_records(
+    client: FlaskClient, auth_headers: dict[str, str]
+) -> None:
+    create_response = client.post(
+        "{{ module.url_prefix }}/", json=_endpoint_data(), headers=auth_headers
+    )
+    item_id = _response_payload(create_response).get("id")
+    assert isinstance(item_id, int)
+
+    delete_response = client.delete(
+        f"{{ module.url_prefix }}/{item_id}", headers=auth_headers
+    )
+    assert delete_response.status_code == 200
+    assert _response_data(delete_response)["msg"] == "deleted"
+    assert client.get(
+        f"{{ module.url_prefix }}/{item_id}", headers=auth_headers
+    ).status_code == 404
+
+
+def test_{{ module.singular }}_http_bulk_deletes_records(
+    client: FlaskClient, auth_headers: dict[str, str]
+) -> None:
+    create_response = client.post(
+        "{{ module.url_prefix }}/", json=_endpoint_data(), headers=auth_headers
+    )
+    item_id = _response_payload(create_response).get("id")
+    assert isinstance(item_id, int)
+
+    response = client.post(
+        "{{ module.url_prefix }}/bulk-delete",
+        json={"ids": [item_id]},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert _response_payload(response)["deleted"] == 1
+{% endif %}

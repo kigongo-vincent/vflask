@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+{% if needs_date_import %}
+from datetime import date, datetime
+from typing import cast
+{% endif %}
+
+{% if 'r' in crud_mode %}
 from app.base.query import apply_filters
+{% endif %}
 from app.base.types import JSONObject
 from app.extensions import db
 from app.modules.{{ module.table_name }}.models import {{ module.class_name }}
 
+{% if 'r' in crud_mode %}
 FILTERABLE: set[str] = {
 {% for field in fields %}
     "{{ field.name }}",
@@ -15,6 +23,24 @@ FILTERABLE: set[str] = {
     "name",
 {% endif %}
 }
+{% endif %}
+
+{% if needs_date_import %}
+def _coerce_input(data: JSONObject) -> dict[str, object]:
+    values = cast(dict[str, object], dict(data))
+{% for field in fields if field.type == 'date' %}
+    {{ field.name }} = values.get("{{ field.name }}")
+    if isinstance({{ field.name }}, str):
+        values["{{ field.name }}"] = date.fromisoformat({{ field.name }})
+{% endfor %}
+{% for field in fields if field.type == 'datetime' %}
+    {{ field.name }} = values.get("{{ field.name }}")
+    if isinstance({{ field.name }}, str):
+        values["{{ field.name }}"] = datetime.fromisoformat({{ field.name }})
+{% endfor %}
+    return values
+
+{% endif %}
 
 
 class {{ module.class_name }}Service:
@@ -23,6 +49,7 @@ class {{ module.class_name }}Service:
     def __init__(self) -> None:
         self.db = db
 
+{% if 'r' in crud_mode %}
     def list_{{ module.table_name }}(self, req: JSONObject) -> tuple[list[{{ module.class_name }}], int]:
         """List {{ module.table_name }} with filtering and pagination."""
         pagination_value = req.get("pagination", {})
@@ -55,13 +82,13 @@ class {{ module.class_name }}Service:
         search_value = req.get("search")
         if isinstance(search_value, str) and search_value:
             term = f"%{search_value}%"
-{% if fields %}
+{% if fields | selectattr('type', 'in', ['string', 'text']) | list %}
             query = query.filter(
 {% for field in fields if field.type in ('string', 'text') %}
                 {{ module.class_name }}.{{ field.name }}.like(term){% if not loop.last %} |{% endif %}
 {% endfor %}
             )
-{% else %}
+{% elif not fields %}
             query = query.filter({{ module.class_name }}.name.like(term))
 {% endif %}
 
@@ -77,25 +104,38 @@ class {{ module.class_name }}Service:
     def get_{{ module.singular }}(self, item_id: int) -> {{ module.class_name }} | None:
         """Get a single {{ module.singular }} by ID."""
         return self.db.session.get({{ module.class_name }}, item_id)
+{% endif %}
 
     def create_{{ module.singular }}(self, data: JSONObject) -> {{ module.class_name }}:
         """Create a new {{ module.singular }}."""
+    {% if needs_date_import %}
+        item = {{ module.class_name }}(**_coerce_input(data))
+    {% else %}
         item = {{ module.class_name }}(**data)
+    {% endif %}
         self.db.session.add(item)
         self.db.session.commit()
         return item
 
+{% if 'u' in crud_mode %}
     def update_{{ module.singular }}(self, item_id: int, updates: JSONObject) -> {{ module.class_name }} | None:
         """Update an existing {{ module.singular }}."""
         item = self.get_{{ module.singular }}(item_id)
         if not item or item.deleted_at:
             return None
-        for key, value in updates.items():
+    {% if needs_date_import %}
+        normalized_updates = _coerce_input(updates)
+    {% else %}
+        normalized_updates = updates
+    {% endif %}
+        for key, value in normalized_updates.items():
             if hasattr(item, key):
                 setattr(item, key, value)
         self.db.session.commit()
         return item
+{% endif %}
 
+{% if 'd' in crud_mode %}
     def delete_{{ module.singular }}(self, item_id: int) -> bool:
         """Soft delete a {{ module.singular }}."""
         item = self.get_{{ module.singular }}(item_id)
@@ -113,3 +153,4 @@ class {{ module.class_name }}Service:
             count += 1
         self.db.session.commit()
         return count
+    {% endif %}

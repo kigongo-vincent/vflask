@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vflask"
-version = "1.0.0"
+version = "1.1.0"
 description = "Modern typed Flask project scaffolder with blueprints, RBAC, and local module generation."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,6 +13,7 @@ dependencies = [
   "jinja2>=3.1.4",
   "watchdog>=4.0.1",
   "rich>=13.0.0",
+  "pyfiglet>=1.0.2,<2",
 ]
 
 [project.scripts]
@@ -29,3 +30,4 @@ vflask = ["templates/**/*.j2"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests"]

@@ -8,6 +8,7 @@ Requires-Dist: click>=8.1.7
 Requires-Dist: jinja2>=3.1.4
 Requires-Dist: watchdog>=4.0.1
 Requires-Dist: rich>=13.0.0
+Requires-Dist: pyfiglet<2,>=1.0.2
 
 # vflask
 
@@ -271,8 +272,28 @@ vflask module create products \
 ### Run the generated app
 
 ```bash
-python -m app.cli run
+vflask run
 ```
+
+### Manage schema and tests
+
+```bash
+vflask db init
+vflask db migrate -m "add products"
+vflask db upgrade
+vflask test -- -q
+```
+
+### Run common project tasks
+
+```bash
+vflask create-user admin@example.com "Admin User"
+vflask push "feat: add products"
+vflask app -- --help
+vflask exec -- python -m pytest -q
+```
+
+`create-user` prompts for the password without echoing it. `app` forwards commands to the generated app CLI, while `exec` runs an arbitrary command in the project directory without invoking a shell. Use `vflask --help` and `vflask db --help` for the full command options.
 
 ### Check help
 

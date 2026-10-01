@@ -14,12 +14,11 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY app ./app
 COPY migrations ./migrations
-COPY scripts/entrypoint.sh ./scripts/entrypoint.sh
-RUN chown -R app:app /srv/app && chmod 755 /srv/app/scripts/entrypoint.sh
+RUN chown -R app:app /srv/app
 
 USER app
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python -c "from urllib.request import urlopen; urlopen('http://127.0.0.1:5000/api/v1/health', timeout=3)"
 
-CMD ["./scripts/entrypoint.sh"]
+CMD ["vflask", "start"]

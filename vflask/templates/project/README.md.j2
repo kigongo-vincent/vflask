@@ -38,11 +38,17 @@ vflask module create products \
 
 | Command | Purpose |
 | --- | --- |
-| `python -m app.cli run` | Start the generated app locally |
-| `python -m app.cli start` | Alias for starting the app |
-| `python -m app.cli push "feat: add module"` | Commit and push project changes |
-| `python -m app.cli --help` | Show the generated app command list |
-| `pytest -q` | Run the test suite |
+| `vflask run` | Start the app and local services, choosing the next free port when needed |
+| `vflask start` | Apply production migrations and start the Gunicorn server |
+| `vflask db init` | Create tables and seed default roles |
+| `vflask db migrate -m "add products"` | Generate a migration from model changes |
+| `vflask db upgrade` | Apply pending migrations |
+| `vflask test -- -q` | Run tests with additional pytest options |
+| `vflask create-user <email> <name>` | Create a user; prompts for the password |
+| `vflask push "feat: add module"` | Commit and push project changes |
+| `vflask app -- <command>` | Forward any command supported by the generated app CLI |
+| `vflask exec -- <command>` | Run an arbitrary project-local command without a shell |
+| `vflask --help` | Show all framework and project commands |
 
 ## API docs
 

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import socket
 import subprocess
 from pathlib import Path
 
 import click
+from pyfiglet import Figlet
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,13 +26,39 @@ def main() -> None:
 
 
 def _run_app(host: str, port: int, debug: bool) -> None:
+    port = _next_available_port(host, port)
+    os.environ["APP_BASE_URL"] = f"http://{host}:{port}"
+    _print_startup_banner()
+    click.echo(f"Starting {{project_name}} at http://{host}:{port}")
     app = create_app()
     app.run(host=host, port=port, debug=debug)
 
 
+def _next_available_port(host: str, port: int) -> int:
+    for candidate in range(port, 65536):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind((host, candidate))
+            except OSError:
+                continue
+            return candidate
+    raise click.ClickException(f"No available port found at or above {port}")
+
+
+def _print_startup_banner() -> None:
+    click.echo(Figlet(font="big").renderText("VFLASK").rstrip())
+    credit = "by Kigongo Vincent"
+    border = "+" + "-" * (len(credit) + 2) + "+"
+    click.echo("\n".join((
+        border,
+        f"| {credit} |",
+        border,
+    )))
+
+
 @main.command("run")
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host interface for the Flask dev server.")
-@click.option("--port", default=5000, type=int, show_default=True, help="Port for the Flask dev server.")
+@click.option("--port", default=5000, type=click.IntRange(1, 65535), show_default=True, help="Port for the Flask dev server.")
 @click.option("--debug/--no-debug", default=True, show_default=True, help="Enable Flask debug reloader.")
 def run_app(host: str, port: int, debug: bool) -> None:
     """Run the generated application locally."""
@@ -38,7 +67,7 @@ def run_app(host: str, port: int, debug: bool) -> None:
 
 @main.command("start")
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host interface for the Flask dev server.")
-@click.option("--port", default=5000, type=int, show_default=True, help="Port for the Flask dev server.")
+@click.option("--port", default=5000, type=click.IntRange(1, 65535), show_default=True, help="Port for the Flask dev server.")
 @click.option("--debug/--no-debug", default=True, show_default=True, help="Enable Flask debug reloader.")
 def start_app(host: str, port: int, debug: bool) -> None:
     """Alias for starting the app locally."""

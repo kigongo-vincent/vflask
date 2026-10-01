@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from importlib import import_module
 from pathlib import Path
@@ -157,6 +158,8 @@ def _path_parameter(name: str) -> dict[str, object]:
 
 
 def build_openapi_spec(app: Flask) -> JSONObject:
+    api_prefix = "/api/v1"
+    server_url = os.getenv("APP_BASE_URL", "http://127.0.0.1:5000").rstrip("/")
     model_schemas, models = _model_schemas()
     components: dict[str, object] = {
         "schemas": {
@@ -172,7 +175,7 @@ def build_openapi_spec(app: Flask) -> JSONObject:
     protected_auth = {"verify_token", "refresh_token", "me", "update_profile", "logout"}
 
     for rule in app.url_map.iter_rules():
-        if not rule.rule.startswith("/api/v1/") or rule.endpoint in {"openapi_document", "api_docs"}:
+        if not rule.rule.startswith(f"{api_prefix}/") or rule.endpoint in {"openapi_document", "api_docs"}:
             continue
 
         endpoint = rule.endpoint
@@ -180,13 +183,7 @@ def build_openapi_spec(app: Flask) -> JSONObject:
         auth_endpoint = endpoint.rsplit(".", 1)[-1] if blueprint == "auth" else ""
         module_model = models.get(blueprint)
         tag_name = blueprint if blueprint != "system" else "system"
-        tag: dict[str, object] = {"name": tag_name}
-        if module_model:
-            docs_path = Path(__file__).resolve().parent.parent / "modules" / blueprint / "docs.md"
-            if docs_path.is_file():
-                tag["description"] = docs_path.read_text(encoding="utf-8")
-                tag["externalDocs"] = {"description": "Module documentation", "url": f"/api/v1/docs/{blueprint}"}
-        tags[tag_name] = tag
+        tags[tag_name] = {"name": tag_name}
 
         openapi_path = re.sub(r"<(?:(?:int|float|string|path):)?([A-Za-z_][A-Za-z0-9_]*)>", r"{\1}", rule.rule)
         path_item = paths.setdefault(openapi_path, {})
@@ -345,7 +342,7 @@ def build_openapi_spec(app: Flask) -> JSONObject:
     return json_object({
         "openapi": "3.0.3",
         "info": {"title": app.name.replace("_", " ").title() + " API", "version": "1.0.0"},
-        "servers": [{"url": "/"}],
+        "servers": [{"url": server_url, "description": "Local development server"}],
         "tags": list(tags.values()),
         "paths": paths,
         "components": components,

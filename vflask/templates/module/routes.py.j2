@@ -10,7 +10,7 @@ from app.modules.{{ module.table_name }}.handlers import {{ module.class_name }}
 bp = Blueprint("{{ module.table_name }}", __name__, url_prefix="{{ module.url_prefix }}")
 handler = {{ module.class_name }}Handler()
 
-
+{% if 'r' in crud_mode %}
 @bp.post("/list")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
@@ -19,34 +19,37 @@ def list_{{ module.table_name }}() -> tuple[Response, int]:
     return handler.list()
 
 
+@bp.get("/<int:item_id>")
+@auth_required
+def get_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
+    """Get {{ module.singular }} by ID."""
+    return handler.get(item_id)
+{% endif %}
+
+{% if 'c' in crud_mode %}
 @bp.post("/")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
 def create_{{ module.singular }}() -> tuple[Response, int]:
     """Create {{ module.singular }}."""
     return handler.create()
+{% endif %}
 
-
-@bp.get("/<int:item_id>")
-@auth_required
-def get_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
-    """Get {{ module.singular }} by ID."""
-    return handler.get(item_id)
-
-
+{% if 'u' in crud_mode %}
 @bp.put("/<int:item_id>")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
 def update_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
     """Update {{ module.singular }}."""
     return handler.update(item_id)
+{% endif %}
 
-
+{% if 'd' in crud_mode %}
 @bp.delete("/<int:item_id>")
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
 def delete_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
-    """Delete {{ module.singular }}."""
+    """Soft delete {{ module.singular }}."""
     return handler.delete(item_id)
 
 
@@ -54,8 +57,9 @@ def delete_{{ module.singular }}(item_id: int) -> tuple[Response, int]:
 @auth_required
 @role_required({% for role in roles %}"{{ role }}"{% if not loop.last %}, {% endif %}{% endfor %})
 def bulk_delete_{{ module.table_name }}() -> tuple[Response, int]:
-    """Bulk delete {{ module.table_name }}."""
+    """Soft delete multiple {{ module.table_name }}."""
     return handler.bulk_delete()
+{% endif %}
 
 
 def register_routes(app: Flask) -> None:

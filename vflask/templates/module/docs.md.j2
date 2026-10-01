@@ -16,7 +16,7 @@ Auto-generated documentation for the `{{ module.table_name }}` module.
 | updated_at | DateTime | No | No | No |
 | deleted_at | DateTime | Yes | No | No |
 
-Serialized records include `id`, each declared field, `createdAt`, and `updatedAt`. The generated test file `test_module.py` checks declared columns and serialized fields.
+Serialized records include `id`, each declared field, `createdAt`, and `updatedAt`. The generated test file `test_module.py` covers model serialization and the service and HTTP operations enabled by mode `{{ crud_mode }}`.
 
 Creating this module also creates an Alembic table migration in `migrations/versions`. Local startup and the production container apply available revisions automatically.
 
@@ -24,30 +24,50 @@ Creating this module also creates an Alembic table migration in `migrations/vers
 
 Swagger UI is available at `/api/v1/docs`; the OpenAPI document is at `/api/v1/openapi.json`. The `{{ module.class_name }}` response schema is reflected from the registered SQLAlchemy model and matches the fields returned by `to_dict()`.
 
+## Generation mode
+
+This module was generated with `{{ crud_mode }}`. Use `c` for create, `cr` to add read and list, `crd` to add soft and bulk delete, or `crud` to include update as well. Routes, handlers, services, and tests are generated only for the selected operations.
+
+{% if 'r' in crud_mode %}
 List requests require both `pagination.page` and `pagination.limit` as positive integers. The maximum limit is 100.
+{% endif %}
 
 ## Endpoints
 
 | Method | Path | Auth | Roles | Description |
 |--------|------|------|-------|-------------|
+{% if 'r' in crud_mode %}
 | POST | `{{ module.url_prefix }}/list` | ✅ | {{ roles|join(', ') }} | List {{ module.table_name }} |
+{% endif %}
+{% if 'c' in crud_mode %}
 | POST | `{{ module.url_prefix }}/` | ✅ | {{ roles|join(', ') }} | Create {{ module.singular }} |
+{% endif %}
+{% if 'r' in crud_mode %}
 | GET | `{{ module.url_prefix }}/<id>` | ✅ | Any | Get {{ module.singular }} |
+{% endif %}
+{% if 'u' in crud_mode %}
 | PUT | `{{ module.url_prefix }}/<id>` | ✅ | {{ roles|join(', ') }} | Update {{ module.singular }} |
+{% endif %}
+{% if 'd' in crud_mode %}
 | DELETE | `{{ module.url_prefix }}/<id>` | ✅ | {{ roles|join(', ') }} | Delete {{ module.singular }} |
 | POST | `{{ module.url_prefix }}/bulk-delete` | ✅ | {{ roles|join(', ') }} | Bulk delete |
+{% endif %}
 
 ## Usage Examples
 
 ```bash
+{% if 'r' in crud_mode %}
 # List {{ module.table_name }}
 curl -X POST http://localhost:5000{{ module.url_prefix }}/list \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"pagination": {"page": 1, "limit": 10}, "columns": [], "search": ""}'
+{% endif %}
 
+{% if 'c' in crud_mode %}
 # Create {{ module.singular }}
 curl -X POST http://localhost:5000{{ module.url_prefix }}/ \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ {% for field in fields %}"{{ field.name }}": ...{% if not loop.last %}, {% endif %}{% endfor %} }'
+{% endif %}

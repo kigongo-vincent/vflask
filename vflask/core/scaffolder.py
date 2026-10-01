@@ -24,6 +24,21 @@ class FieldData(TypedDict):
     default: str | None
 
 
+class MigrationFieldData(TypedDict):
+    name: str
+    alembic_type: str
+    nullable: bool
+    unique: bool
+    index: bool
+
+
+class ModuleTemplateField(FieldData):
+    sqlalchemy_type: str
+    python_type: str
+    alembic_type: str
+    test_value: str
+
+
 @dataclass(slots=True)
 class FieldSpec:
     name: str
@@ -192,7 +207,8 @@ class ProjectScaffolder:
                 os.chmod(output_path, 0o755)
 
         generated_files = {
-            "requirements.txt": "click==8.1.7\nFlask==3.1.0\nFlask-SQLAlchemy==3.1.1\nFlask-Migrate==4.0.7\nFlask-JWT-Extended==4.7.1\nFlask-Cors==5.0.0\npsycopg[binary]==3.3.6\npython-dotenv==1.0.1\nwatchdog==4.0.1\nrich==13.0.0\ngunicorn==23.0.0\nrequests>=2.32,<3\nboto3>=1.35,<2\ncloudinary>=1.41,<2\npytest==8.3.1\n",
+            ".gitignore": ".env\n.venv/\nvenv/\n__pycache__/\n*.py[cod]\n.pytest_cache/\n.mypy_cache/\n.pyright/\n.coverage\nhtmlcov/\n.DS_Store\n",
+            "requirements.txt": "vflask>=1.1.0,<2\nclick==8.1.7\nFlask==3.1.0\nFlask-SQLAlchemy==3.1.1\nFlask-Migrate==4.0.7\nFlask-JWT-Extended==4.7.1\nFlask-Cors==5.0.0\npsycopg[binary]==3.3.6\npython-dotenv==1.0.1\nwatchdog==4.0.1\nrich==13.0.0\npyfiglet>=1.0.2,<2\ngunicorn==23.0.0\nrequests>=2.32,<3\nboto3>=1.35,<2\ncloudinary>=1.41,<2\npytest==8.3.1\n",
             "requirements-dev.txt": "-r requirements.txt\npyright>=1.1.400,<2\n",
             "migrations/alembic.ini": """[alembic]
 script_location = .
@@ -234,7 +250,7 @@ format = %(levelname)-5.5s [%(name)s] %(message)s
 datefmt = %H:%M:%S
 """,
             "migrations/versions/.gitkeep": "",
-            "pyrightconfig.json": '{\n  "include": ["app", "tests", "migrations"],\n  "pythonVersion": "3.11",\n  "typeCheckingMode": "standard",\n  "reportExplicitAny": "error",\n  "strict": ["app/base/types.py", "app/modules"],\n  "executionEnvironments": [\n    {\n      "root": ".",\n      "extraPaths": ["."]\n    }\n  ]\n}\n',
+            "pyrightconfig.json": '{\n  "include": ["app", "tests", "migrations"],\n  "pythonVersion": "3.11",\n  "stubPath": "typings",\n  "typeCheckingMode": "standard",\n  "reportExplicitAny": "error",\n  "strict": ["app/base/types.py", "app/modules"],\n  "executionEnvironments": [\n    {\n      "root": ".",\n      "extraPaths": ["."]\n    }\n  ]\n}\n',
             ".env.example": "FLASK_APP=app:create_app\nFLASK_DEBUG=0\nSECRET_KEY=replace-with-a-random-secret\nDATABASE_URL=postgresql+psycopg://app:app@localhost:5432/app\nJWT_SECRET_KEY=replace-with-a-separate-random-secret\nREDIS_URL=redis://localhost:6379/0\nPORT=5000\nWEB_CONCURRENCY=3\nGUNICORN_THREADS=2\nPAYMENT_PROVIDER=flutterwave\nFLW_SECRET_KEY=\nSTORAGE_PROVIDER=s3\nS3_BUCKET=\nAWS_REGION=us-east-1\nCLOUDINARY_CLOUD_NAME=\nCLOUDINARY_API_KEY=\nCLOUDINARY_API_SECRET=\nMAIL_PROVIDER=smtp\nMAIL_FROM_ADDRESS=\nSMTP_HOST=\nSMTP_PORT=587\nSMTP_USERNAME=\nSMTP_PASSWORD=\nGOOGLE_CLIENT_ID=\nGOOGLE_CLIENT_SECRET=\nGOOGLE_REDIRECT_URI=\n",
             "docker-compose.yml": """services:\n  db:\n    image: postgres:16\n    environment:\n      POSTGRES_DB: app\n      POSTGRES_USER: app\n      POSTGRES_PASSWORD: app\n    ports:\n      - "5432:5432"\n    volumes:\n      - postgres_data:/var/lib/postgresql/data\n\n  redis:\n    image: redis:7-alpine\n    ports:\n      - "6379:6379"\n\nvolumes:\n  postgres_data:\n""",
             "app/__init__.py": """from __future__ import annotations
@@ -249,6 +265,12 @@ from app.base.types import JSONObject, json_object
 from app.auth.routes import register_auth_routes
 from app.config import AppConfig
 from app.extensions import db, jwt, migrate
+
+API_PREFIX = "/api/v1"
+HEALTH_ROUTE = "/api/v1/health"
+OPENAPI_ROUTE = "/api/v1/openapi.json"
+DOCS_ROUTE = "/api/v1/docs"
+MODULES_ROUTE = "/api/v1/docs/modules.json"
 
 
 def create_app(config_object: type | None = None) -> Flask:
@@ -273,19 +295,19 @@ def create_app(config_object: type | None = None) -> Flask:
     register_modules(app)
     register_auth_routes(app)
 
-    @app.get("/api/v1/health")
+    @app.get(HEALTH_ROUTE)
     def healthcheck() -> tuple[JSONObject, int]:
         return {"status": "ok"}, 200
 
-    @app.get("/api/v1/openapi.json")
+    @app.get(OPENAPI_ROUTE)
     def openapi_document() -> tuple[JSONObject, int]:
         return build_openapi_spec(app), 200
 
-    @app.get("/api/v1/docs")
+    @app.get(DOCS_ROUTE)
     def api_docs() -> Response:
-        return Response("<!doctype html><html><head><title>API documentation</title><link rel='stylesheet' href='https://unpkg.com/swagger-ui-dist@5/swagger-ui.css'></head><body><div id='swagger-ui'></div><script src='https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js'></script><script>SwaggerUIBundle({url:'/api/v1/openapi.json',dom_id:'#swagger-ui'});</script></body></html>", mimetype="text/html")
+        return Response(f"<!doctype html><html><head><title>API documentation</title><link rel='stylesheet' href='https://unpkg.com/swagger-ui-dist@5/swagger-ui.css'></head><body><div id='swagger-ui'></div><script src='https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js'></script><script>SwaggerUIBundle({{url:'{API_PREFIX}/openapi.json',dom_id:'#swagger-ui'}});</script></body></html>", mimetype="text/html")
 
-    @app.get("/api/v1/docs/modules.json")
+    @app.get(MODULES_ROUTE)
     def module_docs_index() -> tuple[JSONObject, int]:
         modules_dir = Path(__file__).resolve().parent / "modules"
         entries: list[JSONObject] = []
@@ -302,15 +324,15 @@ def create_app(config_object: type | None = None) -> Flask:
             entries.append(
                 json_object({
                     "name": module_name,
-                    "path": f"/api/v1/{module_name}",
-                    "docs": f"/api/v1/docs/{module_name}",
+                    "path": f"{API_PREFIX}/{module_name}",
+                    "docs": f"{API_PREFIX}/docs/{module_name}",
                     "available": True,
                 })
             )
 
         return json_object({
             "title": "API Documentation",
-            "base_url": "/api/v1",
+            "base_url": API_PREFIX,
             "modules": entries,
             "docs": docs_by_module,
         }), 200
@@ -737,6 +759,7 @@ class User(SoftDeleteMixin, TimestampMixin, db.Model):
             "app/shared/rbac.py": """from __future__ import annotations\n\nfrom app.extensions import db\nfrom app.shared.models import Role, User\n\n\nclass RBACService:\n    @staticmethod\n    def seed_roles() -> None:\n        defaults = [\n            ("admin", "Full access"),\n            ("editor", "Can edit records"),\n            ("viewer", "Read-only access"),\n        ]\n        for name, description in defaults:\n            if not db.session.query(Role).filter_by(name=name).first():\n                db.session.add(Role(name=name, description=description))\n        db.session.commit()\n\n    @staticmethod\n    def assign_role(user: User, role_name: str) -> None:\n        role = db.session.query(Role).filter_by(name=role_name).first()\n        if role and role not in user.roles:\n            user.roles.append(role)\n            db.session.commit()\n\n    @staticmethod\n    def user_has_role(user: User, *required_roles: str) -> bool:\n        if not required_roles:\n            return True\n        if not user:\n            return False\n        names = {role.name for role in user.roles}\n        return bool(set(required_roles) & names)\n""",
             "app/modules/__init__.py": """from __future__ import annotations\n\nfrom importlib import import_module\nfrom pathlib import Path\n\nfrom flask import Flask\n\n\ndef register_modules(app: Flask) -> None:\n    modules_dir = Path(__file__).resolve().parent\n    for child in sorted(modules_dir.iterdir()):\n        if child.is_dir() and (child / "routes.py").exists():\n            module = import_module(f"app.modules.{child.name}.routes")\n            if hasattr(module, "register_routes"):\n                module.register_routes(app)\n""",
             "app/modules/.gitkeep": "",
+            "typings/pyfiglet/__init__.pyi": "class Figlet:\n    def __init__(self, font: str = ...) -> None: ...\n    def renderText(self, text: str) -> str: ...\n",
         }
         generated_files["docker-compose.yml"] = env.get_template("project/docker-compose.yml.j2").render()
         generated_files["app/base/query.py"] = env.get_template("project/app/base/query.py.j2").render()
@@ -800,7 +823,7 @@ class ModuleScaffolder:
                 "singular": singular_name,
                 "url_prefix": f"/api/v1/{plural_name}",
             }
-        module_fields: list[dict[str, object]] = [
+        module_fields: list[ModuleTemplateField] = [
                 {
                     **field,
                     "sqlalchemy_type": FieldSpec(**field).sqlalchemy_type,
@@ -833,7 +856,16 @@ class ModuleScaffolder:
 
         versions_dir = root / "migrations" / "versions"
         if is_new_module and versions_dir.is_dir():
-            migration_fields = list(module_fields)
+            migration_fields: list[MigrationFieldData] = [
+                {
+                    "name": field["name"],
+                    "alembic_type": field["alembic_type"],
+                    "nullable": field["nullable"],
+                    "unique": field["unique"],
+                    "index": field["index"],
+                }
+                for field in module_fields
+            ]
             if not migration_fields:
                 migration_fields = [{
                     "name": "name",

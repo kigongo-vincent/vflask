@@ -119,6 +119,8 @@ This generates files for a business module, such as:
 - tests
 - migration stub
 
+Choose the generated operations with `--mode`: `c` generates create, `cr` adds read/list, `crd` adds soft and bulk delete, and `crud` includes update as well. The default is `crud`.
+
 ### 3) Add the database model
 
 Generated module files create a model for your data. For example, a product might have fields like name, price, and sku.
@@ -260,8 +262,28 @@ vflask module create products \
 ### Run the generated app
 
 ```bash
-python -m app.cli run
+vflask run
 ```
+
+### Manage schema and tests
+
+```bash
+vflask db init
+vflask db migrate -m "add products"
+vflask db upgrade
+vflask test -- -q
+```
+
+### Run common project tasks
+
+```bash
+vflask create-user admin@example.com "Admin User"
+vflask push "feat: add products"
+vflask app -- --help
+vflask exec -- python -m pytest -q
+```
+
+`create-user` prompts for the password without echoing it. `app` forwards commands to the generated app CLI, while `exec` runs an arbitrary command in the project directory without invoking a shell. Use `vflask --help` and `vflask db --help` for the full command options.
 
 ### Check help
 

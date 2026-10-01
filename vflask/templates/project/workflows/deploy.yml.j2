@@ -61,11 +61,10 @@ jobs:
             chmod 600 "$deploy_dir/.env"
             printf '%s' "$DOCKER_PAT" | docker login --username "$DOCKER_USERNAME" --password-stdin
             docker pull "$image"
-            docker run --rm --env-file "$deploy_dir/.env" "$image" sh -c 'if find migrations/versions -maxdepth 1 -name "*.py" -print -quit | grep -q .; then flask --app app:create_app db upgrade; fi'
             docker rm --force "$PROJECT_NAME" 2>/dev/null || true
             docker run --detach --restart unless-stopped \
               --name "$PROJECT_NAME" \
               --env-file "$deploy_dir/.env" \
               --publish 5000:5000 \
-              "$image"
+              "$image" vflask start
             docker image prune --force

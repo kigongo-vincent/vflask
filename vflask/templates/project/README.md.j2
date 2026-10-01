@@ -1,113 +1,279 @@
-# {{ project_name }}
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ project_name }} | vflask app</title>
+    <style>
+      :root {
+        --airbnb-red: #ff385c;
+        --airbnb-red-dark: #d81d43;
+        --airbnb-ink: #222222;
+        --airbnb-muted: #717171;
+        --airbnb-line: #ebebeb;
+        --airbnb-soft: #fff4f5;
+        --airbnb-bg: #f7f7f7;
+        --card: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #fff, var(--airbnb-bg));
+        color: var(--airbnb-ink);
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 30px 20px 80px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--airbnb-line);
+        border-radius: 26px;
+        box-shadow: 0 18px 40px rgba(34, 34, 34, 0.04);
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 24px;
+        padding: 28px;
+        margin-bottom: 28px;
+        background: linear-gradient(140deg, white 0%, #fff5f6 100%);
+        border-color: rgba(255, 56, 92, 0.08);
+      }
+      .eyebrow {
+        display: inline-flex;
+        border-radius: 999px;
+        background: rgba(255, 56, 92, 0.08);
+        color: var(--airbnb-red-dark);
+        border: 1px solid rgba(255, 56, 92, 0.08);
+        padding: 8px 12px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 18px 0 12px;
+        font-size: clamp(2.3rem, 5vw, 4rem);
+        letter-spacing: -0.06em;
+      }
+      p { line-height: 1.75; color: var(--airbnb-muted); }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .button {
+        display: inline-flex;
+        justify-content: center;
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-weight: 700;
+        border: 1px solid transparent;
+      }
+      .button.primary {
+        background: var(--airbnb-red);
+        color: white;
+      }
+      .button.secondary {
+        background: white;
+        border-color: var(--airbnb-line);
+        color: var(--airbnb-ink);
+      }
+      .stats {
+        display: grid;
+        gap: 16px;
+        padding: 20px;
+        border-radius: 24px;
+        background: rgba(255,255,255,0.8);
+        border: 1px solid rgba(34,34,34,0.06);
+      }
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--airbnb-line);
+      }
+      .metric:last-child { border-bottom: 0; }
+      .label { color: var(--airbnb-muted); }
+      .value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.04em; }
+      section { margin-top: 28px; }
+      h2 {
+        margin: 0 0 14px;
+        font-size: clamp(1.8rem, 3vw, 2.6rem);
+        letter-spacing: -0.05em;
+      }
+      .panel {
+        padding: 20px;
+      }
+      pre {
+        margin: 0;
+        overflow-x: auto;
+        background: #0f172a;
+        color: #e8eefb;
+        padding: 18px 20px;
+        border-radius: 16px;
+        line-height: 1.7;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+      }
+      th, td {
+        padding: 16px 18px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--airbnb-line);
+      }
+      th {
+        background: #fafafa;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        color: var(--airbnb-muted);
+      }
+      td { color: var(--airbnb-ink); }
+      .badge-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .badge {
+        display: inline-flex;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #f8f8f8;
+        border: 1px solid var(--airbnb-line);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .footer {
+        margin-top: 36px;
+        padding-top: 20px;
+        border-top: 1px solid var(--airbnb-line);
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--airbnb-muted);
+      }
+      @media (max-width: 760px) {
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="card hero">
+        <div>
+          <span class="eyebrow">Python 3.11+ · Flask 3</span>
+          <h1>{{ project_name }}</h1>
+          <p>
+            Built with vflask, a production-minded app scaffolder for Flask. This project includes a typed
+            module structure, auth flow, migrations, API docs, tests, and deployment-ready conventions.
+          </p>
+          <div class="cta-row">
+            <a class="button primary" href="#quickstart">Get started</a>
+            <a class="button secondary" href="#operations">See ops</a>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="metric">
+            <div class="label">Default version</div>
+            <div class="value">1.0.0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Runtime</div>
+            <div class="value">Flask</div>
+          </div>
+          <div class="metric">
+            <div class="label">Included</div>
+            <div class="value">DB + Auth + API</div>
+          </div>
+        </div>
+      </header>
 
-Built with [vflask](https://github.com/vflask/vflask) - Modern typed Flask scaffolder.
-
-## Installation
-
-```bash
-python3 -m venv .venv
+      <section>
+        <h2>Setup</h2>
+        <div class="panel">
+          <pre><code>python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-cp .env.example .env
-```
+cp .env.example .env</code></pre>
+        </div>
+      </section>
 
-## Project commands
+      <section id="quickstart">
+        <h2>Run the app</h2>
+        <div class="panel">
+          <pre><code>vflask run
+# or, if you already manage Postgres and Redis externally:
+vflask run --project-root . --no-services</code></pre>
+        </div>
+      </section>
 
-```bash
-vflask run
-./scripts/push.sh
-vflask --help
-```
+      <section>
+        <h2>Module workflow</h2>
+        <div class="panel">
+          <pre><code>vflask module create products \
+  -f name:string:required \
+  -f price:decimal:required \
+  -f sku:string:unique \
+  -r admin -r editor</code></pre>
+        </div>
+      </section>
 
-### Run the app
+      <section>
+        <h2>API docs</h2>
+        <div class="panel">
+          <pre><code>Swagger UI: http://127.0.0.1:5000/api/v1/docs
+OpenAPI:    http://127.0.0.1:5000/api/v1/openapi.json
+Health:     http://127.0.0.1:5000/health</code></pre>
+        </div>
+      </section>
 
-```bash
-vflask run
-```
+      <section>
+        <h2>Project commands</h2>
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Command</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>vflask run</code></td><td>Prepare services, apply migrations, and start the app locally.</td></tr>
+              <tr><td><code>vflask watch --project-root .</code></td><td>Regenerate module docs when project files change.</td></tr>
+              <tr><td><code>pytest -q</code></td><td>Run the test suite.</td></tr>
+              <tr><td><code>./scripts/push.sh "feat: add module"</code></td><td>Commit and push the project to your remote repository.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-This creates `.env` from `.env.example` when needed, starts healthy Postgres and Redis services with Compose, applies module migrations, creates missing tables and default roles, and starts Flask. Use `vflask run --no-services` with an external database and Redis. Run `vflask run --help` for host and port options. `scripts/start.sh` remains a compatibility wrapper around this command.
+      <section id="operations">
+        <h2>Operational checklist</h2>
+        <div class="panel">
+          <div class="badge-list">
+            <span class="badge">Use Alembic for schema migrations</span>
+            <span class="badge">Keep secrets in env vars</span>
+            <span class="badge">Use managed Postgres</span>
+            <span class="badge">Run tests before deploy</span>
+            <span class="badge">Use CI/CD for release builds</span>
+            <span class="badge">Version tags follow semver</span>
+          </div>
+        </div>
+      </section>
 
-The example environment contains placeholders. For production, replace both signing keys with independent random values of at least 32 characters and set `DATABASE_URL` to a reachable database. The Docker image runs with `APP_ENV=production` and refuses placeholder keys or localhost database URLs.
-
-Run generated tests with `pytest -q`. Each module includes `app/modules/<module>/test_module.py`, which checks its declared columns and serialized response fields.
-
-## API docs and auth
-
-- Swagger UI: `/api/v1/docs`
-- OpenAPI JSON: `/api/v1/openapi.json`
-- Module Markdown index: `/api/v1/docs/modules.json`
-
-OpenAPI schemas reflect registered SQLAlchemy model fields and generated response data. List requests must include positive `pagination.page` and `pagination.limit` values; the maximum limit is 100.
-
-The auth API includes signup, login, token verification and refresh, OTP/password reset, profile, and logout. Google OAuth is configured with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the public callback URL in `GOOGLE_REDIRECT_URI`:
-
-1. Call `GET /api/v1/auth/google/authorization-url` and redirect the client to the returned `authorization_url`.
-2. Return Google's `code` and signed `state` to `GET` or `POST /api/v1/auth/google/callback`.
-
-The callback exchanges the code with Google, requires a verified email address, and returns app access and refresh tokens.
-
-## Integrations
-
-Provider contracts live under `app/integrations` and can be replaced with a dotted custom class path:
-
-- Payments: `PAYMENT_PROVIDER=flutterwave` by default; set `PAYMENT_PROVIDER_CLASS=your_package.YourProvider` to replace it.
-- Object storage: `STORAGE_PROVIDER=s3` by default; `cloudinary` is also supported. Custom adapters use `STORAGE_PROVIDER_CLASS`.
-- Email: `MAIL_PROVIDER=smtp` by default; `ses` uses Amazon SES. Custom adapters use `MAIL_PROVIDER_CLASS`.
-- Google OAuth: configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and the exact public callback URL in `GOOGLE_REDIRECT_URI`. Request `/api/v1/auth/google/authorization-url`, then return Google's `code` and signed `state` to `/api/v1/auth/google/callback`.
-
-Use the default adapters through `app.integrations`:
-
-```python
-from app.integrations import get_mailer, get_payment_provider, get_storage_provider
-
-payment = get_payment_provider()
-payment.create_payment(
-	amount=25.0,
-	currency="USD",
-	email="customer@example.com",
-	transaction_reference="order-123",
-	redirect_url="https://example.com/payment/complete",
-)
-
-get_mailer().send(to="customer@example.com", subject="Receipt", text="Payment received")
-CI runs tests and strict Pyright, starts app/Postgres/Redis using Compose networking, and probes the app health endpoint before publishing the image to Docker Hub and deploying it to EC2. Configure repository secrets `DOCKER_PAT`, `DOCKER_USERNAME`, `EC2_HOST`, `EC2_SSH_KEY`, `EC2_USER`, `ENV_FILE`, and `PROJECT_NAME`.
-
-Storage adapters implement `upload(file, key=..., content_type=...)` and `delete(key)`. S3 returns an `s3://bucket/key` reference; Cloudinary returns its secure URL. AWS credentials use boto3's standard credential chain.
-
-For S3 and SES in production, attach an IAM role to the EC2 instance rather than setting long-lived AWS keys. Limit S3 access to the required bucket/prefix (`s3:PutObject` and `s3:DeleteObject`) and SES access to the verified sender identity (`ses:SendEmail`).
-
-Keep production credentials in a secret manager or deployment environment, never in source control. Replace `SECRET_KEY` and `JWT_SECRET_KEY` with independent random values before deployment.
-
-## Docker deployment
-
-Build and run locally with `docker build -t {{ project_name }} .`. The GitHub workflows run tests and build the image, then publish it to Docker Hub and deploy it to EC2. Configure repository secrets `DOCKER_PAT`, `DOCKER_USERNAME`, `EC2_HOST`, `EC2_SSH_KEY`, `EC2_USER`, `ENV_FILE`, and `PROJECT_NAME`. `ENV_FILE` must contain the production environment file contents; set its `DATABASE_URL` to a managed production database, since the EC2 workflow deploys only the application container.
-
-Install Docker Engine on the EC2 host, grant `EC2_USER` permission to run Docker, and allow inbound traffic on port 5000 (or place a TLS-terminating reverse proxy in front of it). Creating a module generates its table migration automatically. Local startup and the production container apply committed revisions and create missing tables before serving requests.
-
-For manual model edits or data migrations, generate and review an Alembic revision locally:
-
-```bash
-APP_ENV=development flask --app app:create_app db migrate -m "describe schema change"
-APP_ENV=development flask --app app:create_app db upgrade
-```
-
-Deployment applies committed migrations before replacing the running container. The EC2 host must be able to reach the production database configured in `ENV_FILE`. `db.create_all()` creates missing tables but does not alter existing ones; use Alembic revisions for schema changes. CI runs `pytest`, strict `pyright`, and a Compose health check for the app/Postgres/Redis network.
-
-### Push changes
-
-```bash
-./scripts/push.sh "feat: add module"
-```
-
-### Help
-
-```bash
-./scripts/help.sh
-```
-
-## Creating modules
-
-```bash
-vflask module create sales -f name:string -f amount:float -f status:string:index -r admin
-```
+      <footer class="footer">
+        <span>{{ project_name }}</span>
+        <span>Production-minded Flask scaffolding</span>
+      </footer>
+    </div>
+  </body>
+</html>

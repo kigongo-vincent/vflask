@@ -346,9 +346,3 @@ If you are starting from scratch:
 4. add endpoints and business logic
 5. write tests early
 6. deploy through Docker or CI flow
-
-## Documentation note
-
-The richer visual landing page remains available in [docs/index.html](docs/index.html), but the repository README is intentionally written as a backend developer guide instead of a marketing page.
-
----

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vflask"
-version = "1.1.1"
+version = "1.1.2"
 description = "Modern typed Flask project scaffolder with blueprints, RBAC, and local module generation."
 readme = "README.md"
 requires-python = ">=3.11"

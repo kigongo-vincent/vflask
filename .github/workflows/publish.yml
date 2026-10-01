@@ -45,9 +45,16 @@ jobs:
           version = os.environ["VERSION"]
           path = Path("pyproject.toml")
           text = path.read_text()
-          updated = re.sub(r'^(version\s*=\s*")[^"]*(")', rf'\g<1>{version}\2', text, count=1, flags=re.M)
-          if updated == text:
-              raise SystemExit("Could not update project version in pyproject.toml")
+          match = re.search(r'^(version\s*=\s*")([^"]*)(")', text, flags=re.M)
+          if not match:
+              raise SystemExit("Could not find version in pyproject.toml")
+
+          current = match.group(2)
+          if current == version:
+              print(f"Package version already set to {version}")
+              raise SystemExit(0)
+
+          updated = text[:match.start()] + match.group(1) + version + match.group(3) + text[match.end():]
           path.write_text(updated)
           print(f"Set package version to {version}")
           PY
